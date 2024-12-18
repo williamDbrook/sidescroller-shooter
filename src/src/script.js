@@ -10,20 +10,19 @@ const ballRadius = 10;
 
 // Background properties
 const backgroundImage = new Image();
-backgroundImage.src = 'bg.png'; // Replace with the actual path to your image
-let backgroundX = 0; // Initial background position
+backgroundImage.src = 'bg.png'; 
+let backgroundX = 0; 
 
 // Player properties
 const playerWidth = 50;
 const playerHeight = 30;
 let playerX = canvas.width / 2 - playerWidth / 2;
-let playerY = canvas.height - playerHeight - 20; // Positioned near the bottom
+let playerY = canvas.height - playerHeight - 20;
 const playerSpeed = 5;
 
 // Handle keypresses
 let keys = {};
 
-// Event listener for keydown and keyup to track user input
 document.addEventListener('keydown', (e) => {
   keys[e.key] = true;
 });
@@ -34,9 +33,9 @@ document.addEventListener('keyup', (e) => {
 // Draw background function
 function drawBackground() {
   // Draw the background image
-  ctx.drawImage(backgroundImage, backgroundX, 0, canvas.width, canvas.height);
+  ctx.drawImage(backgroundImage, backgroundX, 0, 1600, canvas.height);
 
-  // If the background has moved completely off the screen, reset it
+  // bg reset
   if (backgroundX <= -canvas.width) {
     backgroundX = 0;
   }
@@ -44,7 +43,7 @@ function drawBackground() {
 
 // Draw the player
 function drawPlayer() {
-  ctx.fillStyle = "blue"; // Player color
+  ctx.fillStyle = "blue"; 
   ctx.fillRect(playerX, playerY, playerWidth, playerHeight);
 }
 
@@ -70,9 +69,9 @@ function updateGame() {
   }
 
   // Scroll the background
-  backgroundX -= 2; // Background moves at a speed of 2 px per frame
+  backgroundX -= 2; 
 
-  // Move the player with arrow keys or WASD
+  // player controlls
   if (keys['ArrowLeft'] || keys['a']) {
     playerX -= playerSpeed;
   }
@@ -96,11 +95,11 @@ function updateGame() {
 // Game loop
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground();   // Draw the background
-  drawPlayer();       // Draw the player
-  drawBall();         // Draw the ball
-  updateGame();       // Update the game state
-  requestAnimationFrame(gameLoop);  // Keep the game running
+  drawBackground();   
+  drawPlayer();       
+  drawBall();         
+  updateGame();
+  requestAnimationFrame(gameLoop); 
 }
 
 // Start the game loop once the background image is loaded

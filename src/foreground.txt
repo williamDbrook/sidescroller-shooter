@@ -1,3 +1,5 @@
+Will do later
+
 const foregroundImage = new Image();
 foregroundImage.src = 'foreground.png';  // Add your foreground image
 
