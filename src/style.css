@@ -1,0 +1,31 @@
+body {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    background-color: #222;
+    color: white;
+    font-family: Arial, sans-serif;
+  }
+  
+canvas {
+    border: 2px solid white;
+    background-color: white;
+    display: block;
+    margin: 20px auto;
+}
+
+a {
+  color: white;
+  background-color: darkgray;
+  text-align: center;
+  margin: 1cm;
+  padding: 1em;
+}
+
+a:hover {
+  background-color: rgb(46, 46, 46);
+}
+
+p {
+  padding: 1em;
+}

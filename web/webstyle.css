@@ -1,0 +1,38 @@
+body {
+    text-align: center;
+    background-color: rgb(61, 61, 61);
+    color: white;
+}
+
+h1 {
+    text-decoration: underline;
+}
+
+div.container {
+    text-align: center;
+    background-color: #333;
+    margin-top: 1cm;
+  }
+  
+  ul.myUL {
+    display: inline-block;
+    text-align: left;
+  }
+
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+a {
+    float: left;
+    display: block;
+    padding: 8px;
+    background-color: #dddddd;
+ }
+
+nav {
+    background-color: gray;
+}
