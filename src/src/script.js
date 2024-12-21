@@ -32,27 +32,23 @@ const playerHealth = {
 
 function drawPlayerHealth() {
     ctx.fillStyle = 'black';
-    ctx.fillRect(10, 10, 200, 20); // Background of the health bar
+    ctx.fillRect(10, 10, 200, 20);
     ctx.fillStyle = 'green';
     ctx.fillRect(10, 10, (playerHealth.current / playerHealth.max) * 200, 20); // Health bar
     ctx.strokeStyle = 'white';
-    ctx.strokeRect(10, 10, 200, 20); // Border
+    ctx.strokeRect(10, 10, 200, 20); 
 }
 
 const enemyAttackRange = 50;
 const enemyAttackCooldown = 1000;
 
-// --- Bullets ---
 const bullets = [];
 const bulletSpeed = 10;
 const shootCooldown = 200;
 let lastShotTime = 0;
 
-// --- Enemies ---
 let enemies = initializeEnemies();
-let enemiesCleared = false;
 
-// --- Functions for Initialization ---
 function initializeEnemies() {
     return [
         { x: 400, y: 200, width: 50, height: 50, health: 3, dx: 1, dy: 1, lastAttackTime: 0 },
@@ -60,16 +56,13 @@ function initializeEnemies() {
     ];
 }
 
-// --- Input tracking ---
 const keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
-// --- Background ---
 function drawBackground() {
     ctx.drawImage(backgroundImage, backgroundX, 0, canvas.width, canvas.height);
 }
-
 
 function drawPlayer() {
   ctx.save();
@@ -170,27 +163,23 @@ function drawEnemies() {
 
 function updateEnemies() {
     enemies.forEach((enemy, index) => {
-        // Enemy Movement
         if (distanceBetween(player.x + player.width / 2, player.y + player.height / 2, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2) > enemyAttackRange) {
             moveTowardPlayer(enemy);
         }
 
-        // Enemy Attacks
         if (distanceBetween(player.x + player.width / 2, player.y + player.height / 2, enemy.x + enemy.width / 2, enemy.y + enemy.height / 2) <= enemyAttackRange) {
             const currentTime = Date.now();
             if (currentTime - enemy.lastAttackTime >= enemyAttackCooldown) {
                 playerHealth.current--;
                 enemy.lastAttackTime = currentTime;
 
-                // Check if player health reaches zero
                 if (playerHealth.current <= 0) {
-                    alert("Game Over!"); // Replace this with a better game-over screen
+                    alert("Game Over!");
                     resetGame();
                 }
             }
         }
 
-        // Enemy Bullet Collision
         bullets.forEach((bullet, bulletIndex) => {
             if (
                 bullet.x < enemy.x + enemy.width &&
@@ -205,11 +194,10 @@ function updateEnemies() {
         });
     });
 
-    // Check for cleared enemies
     if (enemies.length === 0 && !enemiesCleared) {
         enemiesCleared = true;
         backgroundX -= canvas.width;
-        enemies = initializeEnemies(); // Reinitialize enemies
+        enemies = initializeEnemies();
     }
 }
 
@@ -219,7 +207,6 @@ function moveTowardPlayer(enemy) {
     enemy.x += Math.cos(angle) * speed;
     enemy.y += Math.sin(angle) * speed;
 
-    // Boundary check
     if (enemy.x < 0) enemy.x = 0;
     if (enemy.x + enemy.width > canvas.width) enemy.x = canvas.width - enemy.width;
     if (enemy.y < 0) enemy.y = 0;
@@ -234,12 +221,51 @@ function resetGame() {
     player.x = 100;
     player.y = canvas.height / 2 - 25;
     playerHealth.current = playerHealth.max;
-    enemies = initializeEnemies();
-    bullets.length = 0; // Clear bullets
-    backgroundX = 0; // Reset background
+    currentLevel = 1; 
+    enemies = initializeEnemiesForLevel(currentLevel);
+    bullets.length = 0; 
+    backgroundX = 0; 
 }
 
-// --- Game loop ---
+let currentLevel = 1;
+let enemiesCleared = false;
+
+function drawLevelInfo() {
+    ctx.fillStyle = 'black';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Level: ${currentLevel}`, canvas.width - 100, 30);
+}
+
+function initializeEnemiesForLevel(Level) {
+    const enemyCount = Math.min(5 + Level, 15);
+    const enemies = [];
+
+    for (let i = 0; i < enemyCount; i++) {
+        enemies.push({
+            x: Math.random() * (canvas.width - 50),
+            y: Math.random() * (canvas.height - 50),
+            width: 50,
+            height: 50,
+            health: 3 + Math.floor(Level / 2),
+            dx: Math.random() < 0.5 ? 1 : -1,
+            dy: Math.random() < 0.5 ? 1 : -1,
+            lastAttackTime: 0,
+    });
+
+    return enemies;
+    }
+}
+
+function checkLevelProgression() {
+    if (enemies.length === 0 && !enemiesCleared) {
+        enemiesCleared = true;
+        backgroundX -= canvas.width;
+        currentLevel++;
+        enemies = initializeEnemiesForLevel(currentLevel);
+        enemiesCleared = false;
+    }
+}
+
 function gameLoop() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
@@ -247,6 +273,7 @@ function gameLoop() {
   drawBullets();
   drawEnemies();
   drawPlayerHealth();
+  drawLevelInfo();
 
   updatePlayer();
   updateBullets();
@@ -255,10 +282,9 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// --- Event Listeners ---
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Space') shootBullet();
 });
 
-// --- Start game ---
+enemies = initializeEnemiesForLevel(currentLevel);
 gameLoop();
