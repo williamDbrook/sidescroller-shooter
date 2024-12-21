@@ -6,4 +6,6 @@ A side scrolling 2.5D shooter made in javascript.
 		- if I feel like it tommorow I will do the shooting mechanic and make the background scroll with the players movement
 - version 0.1.5 - Some improvement has been made. The player is no longer a square. You can shoot now even tho there is nothing to shoot
 		- at. The sprite looks like shit but I will fix it. So stuff I want to get done is : enemies, a background, a good looking sprite
-	        
+- version 0.2 - The enemies have arrived they are currently red squares with healthbars above them. A simple level progression has also been added
+		- it doesnt really work. So stuff I want to get done is: a background, a good looking sprite, functionall level progression, sprites
+		- for the enemies
