@@ -16,7 +16,7 @@ app.use(express.static(__dirname + '/src'));
 
 // Root route
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/src/index.html');
+  res.sendFile(__dirname + '/web/web.html');
 });
 
 // Start the server

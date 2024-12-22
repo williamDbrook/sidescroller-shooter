@@ -5,7 +5,7 @@ const backgroundImage = new Image();
 backgroundImage.src = 'bg.png';
 
 let backgroundX = 0;
-let gameState = 'mainMenu'; 
+let gameState = 'mainMenu'; // 'mainMenu', 'playing', 'paused'
 
 // --- Player properties ---
 const player = {
@@ -19,11 +19,13 @@ const player = {
     sprite: new Image(),
     frameX: 0,
     frameY: 0,
-    frameWidth: 233,
-    frameHeight: 175,
+    frameWidth: 230,
+    frameHeight: 168,
     facingRight: true,
     animationTimer: 0,
     animationSpeed: 6.5,
+    totalFrames: 14, // Total frames including idle frame
+    idleFrame: 13,   // The index of the idle frame
 };
 player.sprite.src = 'player.png';
 
@@ -46,7 +48,7 @@ const enemyAttackCooldown = 1000;
 
 const bullets = [];
 const bulletSpeed = 10;
-const shootCooldown = 200;
+let shootCooldown = 200; // Initial shoot cooldown
 let lastShotTime = 0;
 
 let enemies = [];
@@ -116,6 +118,10 @@ function processCheatCode(command) {
             enemies = [];
             console.log('All enemies killed!');
             break;
+        case 'fastshoot':
+            shootCooldown = 2;
+            console.log('Shoot cooldown set to 2!');
+            break;
         default:
             console.log('Unknown cheat code!');
     }
@@ -144,18 +150,27 @@ function drawBackground() {
 
 function drawPlayer() {
     ctx.save();
+
+    // Calculate scaling factor based on y-coordinate
+    const maxScale = 2;     // Maximum scale factor when player is at the bottom
+    const minScale = 0.5;   // Minimum scale factor when player is at the top
+    const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
+    
+    const drawWidth = player.width * scale;
+    const drawHeight = player.height * scale;
+
     if (!player.facingRight) {
         ctx.scale(-1, 1);
         ctx.drawImage(
             player.sprite,
             player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-            -player.x - player.width, player.y, player.width, player.height
+            -player.x - drawWidth, player.y, drawWidth, drawHeight
         );
     } else {
         ctx.drawImage(
             player.sprite,
             player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-            player.x, player.y, player.width, player.height
+            player.x, player.y, drawWidth, drawHeight
         );
     }
     ctx.restore();
@@ -166,9 +181,9 @@ function updatePlayerSprite() {
     if (player.animationTimer >= player.animationSpeed) {
         player.animationTimer = 0;
         if (player.dx !== 0 || player.dy !== 0) {
-            player.frameX = (player.frameX + 1) % 4;
+            player.frameX = (player.frameX + 1) % (player.totalFrames - 1); // Loop through walking frames
         } else {
-            player.frameX = 0;
+            player.frameX = player.idleFrame; // Switch to idle frame
         }
     }
 }
@@ -205,10 +220,18 @@ function updatePlayer() {
         player.x += player.dx;
         player.y += player.dy;
 
+        // Calculate scaling factor based on y-coordinate
+        const maxScale = 2;     // Maximum scale factor when player is at the bottom
+        const minScale = 0.5;   // Minimum scale factor when player is at the top
+        const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
+        const drawHeight = player.height * scale;
+
+        // Prevent player from moving above a certain y-coordinate (e.g., 50 pixels from the top)
+        const minY = 170;
         if (player.x < 0) player.x = 0;
         if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-        if (player.y < 0) player.y = 0;
-        if (player.y + player.height > canvas.height) player.y = canvas.height - player.height;
+        if (player.y < minY) player.y = minY;
+        if (player.y + drawHeight > canvas.height) player.y = canvas.height - drawHeight;
 
         updatePlayerSprite();
     }
@@ -314,6 +337,7 @@ function resetGame() {
     enemies = initializeEnemiesForLevel(currentLevel);
     bullets.length = 0; 
     backgroundX = 0; 
+    shootCooldown = 200; // Reset shoot cooldown
 }
 
 let currentLevel = 1;
@@ -326,13 +350,13 @@ function drawLevelInfo() {
 }
 
 function initializeEnemiesForLevel(level) {
-    const baseEnemyCount = 1;
-    const maxEnemyCount = 20;
-    const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); 
+    const baseEnemyCount = 1; // Starting with 1 enemy
+    const maxEnemyCount = 20; // Maximum number of enemies
+    const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); // Increase enemies based on level
 
-    const baseHealth = 3;
+    const baseHealth = 3; // Base health for enemies
 
-    const baseSpeed = 1; 
+    const baseSpeed = 1; // Base speed for enemies
 
     const enemies = [];
 
@@ -340,7 +364,7 @@ function initializeEnemiesForLevel(level) {
         let spawnX, spawnY;
         let safeDistance = false;
 
-        
+        // Ensure the enemy spawns at a safe distance from the player
         while (!safeDistance) {
             spawnX = Math.random() * (canvas.width - 50);
             spawnY = Math.random() * (canvas.height - 50);
