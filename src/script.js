@@ -3,35 +3,33 @@ const ctx = canvas.getContext("2d");
 
 const backgroundImage = new Image();
 backgroundImage.src = 'bg.png';
+
 let backgroundX = 0;
+let gameState = 'mainMenu'; 
 
 // --- Player properties ---
 const player = {
     x: 100,
     y: canvas.height / 2 - 25,
-    width: 50,
-    height: 50,
+    width: 75,
+    height: 75,
     speed: 3.5,
     dx: 0,
     dy: 0,
     sprite: new Image(),
     frameX: 0,
     frameY: 0,
-    frameWidth: 341,
-    frameHeight: 268,
+    frameWidth: 233,
+    frameHeight: 175,
     facingRight: true,
     animationTimer: 0,
-    animationSpeed: 15,
+    animationSpeed: 6.5,
 };
 player.sprite.src = 'player.png';
 
-let isMovingToNextLevel = false;
-
-const MIN_SAFE_DISTANCE = 100; 
-
 const playerHealth = {
-    current: 10000,
-    max: 10000,
+    current: 10,
+    max: 10,
 };
 
 function drawPlayerHealth() {
@@ -51,18 +49,85 @@ const bulletSpeed = 10;
 const shootCooldown = 200;
 let lastShotTime = 0;
 
-let enemies = initializeEnemies();
+let enemies = [];
+let isMovingToNextLevel = false;
 
-function initializeEnemies() {
-    return [
-        { x: 400, y: 200, width: 50, height: 50, health: 3, dx: 1, dy: 1, lastAttackTime: 0 },
-        { x: 600, y: 300, width: 50, height: 50, health: 3, dx: -1, dy: -1, lastAttackTime: 0 },
-    ];
-}
+const MIN_SAFE_DISTANCE = 100; // Minimum safe distance for enemy spawns
 
 const keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && gameState === 'playing') shootBullet();
+    if (gameState === 'mainMenu' && e.code === 'Enter') {
+        gameState = 'playing';
+        enemies = initializeEnemiesForLevel(currentLevel);
+    }
+    if (gameState === 'playing' && e.code === 'Escape') {
+        togglePause();
+    } else if (gameState === 'paused' && e.code === 'Escape') {
+        togglePause();
+    }
+    if (gameState === 'paused' && e.code === 'KeyR') {
+        gameState = 'playing';
+        resetGame();
+    }
+    if (gameState === 'paused' && e.code === 'KeyM') {
+        gameState = 'mainMenu';
+        resetGame();
+    }
+});
+
+// --- Cheat Codes Console ---
+const cheatConsole = document.createElement('input');
+cheatConsole.type = 'text';
+cheatConsole.style.position = 'absolute';
+cheatConsole.style.bottom = '10px';
+cheatConsole.style.left = '50%';
+cheatConsole.style.transform = 'translateX(-50%)';
+cheatConsole.style.width = '300px';
+cheatConsole.style.zIndex = 10;
+document.body.appendChild(cheatConsole);
+
+cheatConsole.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const command = cheatConsole.value.trim().toLowerCase();
+        processCheatCode(command);
+        cheatConsole.value = ''; // Clear the input
+    }
+});
+
+function processCheatCode(command) {
+    switch (command) {
+        case 'godmode':
+            playerHealth.current = Infinity;
+            console.log('God mode activated!');
+            break;
+        case 'infiniteammo':
+            bullets.length = Infinity;
+            console.log('Infinite ammo activated!');
+            break;
+        case 'nextlevel':
+            triggerLevelChange();
+            console.log('Skipped to next level!');
+            break;
+        case 'killall':
+            enemies = [];
+            console.log('All enemies killed!');
+            break;
+        default:
+            console.log('Unknown cheat code!');
+    }
+}
+
+function togglePause() {
+    if (gameState === 'playing') {
+        gameState = 'paused';
+    } else if (gameState === 'paused') {
+        gameState = 'playing';
+    }
+}
 
 function drawBackground() {
     let backgroundWidth = canvas.width;
@@ -78,43 +143,34 @@ function drawBackground() {
 }
 
 function drawPlayer() {
-  ctx.save();
-  if (!player.facingRight) {
-      ctx.scale(-1, 1);
-      ctx.drawImage(
-          player.sprite,
-          player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-          -player.x - player.width, player.y, player.width, player.height
-      );
-  } else {
-      ctx.drawImage(
-          player.sprite,
-          player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-          player.x, player.y, player.width, player.height
-      );
-  }
-  ctx.restore();
+    ctx.save();
+    if (!player.facingRight) {
+        ctx.scale(-1, 1);
+        ctx.drawImage(
+            player.sprite,
+            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
+            -player.x - player.width, player.y, player.width, player.height
+        );
+    } else {
+        ctx.drawImage(
+            player.sprite,
+            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
+            player.x, player.y, player.width, player.height
+        );
+    }
+    ctx.restore();
 }
 
 function updatePlayerSprite() {
-  player.animationTimer++;
-  if (player.animationTimer >= player.animationSpeed) {
-      player.animationTimer = 0;
-      if (player.dx !== 0 || player.dy !== 0) {
-          player.frameX = (player.frameX + 1) % 4;
-      } else {
-          player.frameX = 0;
-      }
-  }
-}
-
-function triggerLevelChange() {
-    enemiesCleared = true;
-    backgroundX = 0;  // Reset background position
-    currentLevel++;
-    enemies = initializeEnemiesForLevel(currentLevel);
-    player.x = 0;  // Reset player position to the left side
-    enemiesCleared = false;
+    player.animationTimer++;
+    if (player.animationTimer >= player.animationSpeed) {
+        player.animationTimer = 0;
+        if (player.dx !== 0 || player.dy !== 0) {
+            player.frameX = (player.frameX + 1) % 4;
+        } else {
+            player.frameX = 0;
+        }
+    }
 }
 
 function updatePlayer() {
@@ -158,13 +214,6 @@ function updatePlayer() {
     }
 }
 
-function drawBullets() {
-  bullets.forEach(bullet => {
-      ctx.fillStyle = 'yellow';
-      ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-  });
-}
-
 function shootBullet() {
     const currentTime = Date.now();
     if (currentTime - lastShotTime >= shootCooldown) {
@@ -179,24 +228,30 @@ function shootBullet() {
     }
 }
 
+function drawBullets() {
+    bullets.forEach(bullet => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+    });
+}
 
 function updateBullets() {
-  bullets.forEach((bullet, index) => {
-      bullet.x += bullet.speed;
-      if (bullet.x < 0 || bullet.x > canvas.width) bullets.splice(index, 1);
-  });
+    bullets.forEach((bullet, index) => {
+        bullet.x += bullet.speed;
+        if (bullet.x < 0 || bullet.x > canvas.width) bullets.splice(index, 1);
+    });
 }
 
 function drawEnemies() {
-  enemies.forEach(enemy => {
-      ctx.fillStyle = 'red';
-      ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+    enemies.forEach(enemy => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
 
-      ctx.fillStyle = 'black';
-      ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
-      ctx.fillStyle = 'green';
-      ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / 3) * enemy.width, 5);
-  });
+        ctx.fillStyle = 'black';
+        ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / 3) * enemy.width, 5);
+    });
 }
 
 function updateEnemies() {
@@ -271,14 +326,13 @@ function drawLevelInfo() {
 }
 
 function initializeEnemiesForLevel(level) {
-    const baseEnemyCount = 1; // Base number of enemies
-    const maxEnemyCount = 20; // Maximum number of enemies
-    const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); // Increase enemies based on level
+    const baseEnemyCount = 1;
+    const maxEnemyCount = 20;
+    const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); 
 
-    const baseHealth = 3; // Base health for enemies
-    const healthIncrement = Math.floor(level / 2); // Increase health every 2 levels
+    const baseHealth = 3;
 
-    const baseSpeed = 1; // Base speed for enemies
+    const baseSpeed = 1; 
 
     const enemies = [];
 
@@ -286,7 +340,7 @@ function initializeEnemiesForLevel(level) {
         let spawnX, spawnY;
         let safeDistance = false;
 
-        // Ensure the enemy spawns at a safe distance from the player
+        
         while (!safeDistance) {
             spawnX = Math.random() * (canvas.width - 50);
             spawnY = Math.random() * (canvas.height - 50);
@@ -302,7 +356,7 @@ function initializeEnemiesForLevel(level) {
             y: spawnY,
             width: 50,
             height: 50,
-            health: baseHealth + healthIncrement, // Increase healthassssds
+            health: baseHealth,
             lastAttackTime: 0,
         });
     }
@@ -326,26 +380,60 @@ function triggerLevelChange() {
     enemiesCleared = false;
 }
 
+function drawMainMenu() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'white';
+    ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Welcome to the Game', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillStyle = 'yellow';
+    ctx.font = '30px Arial';
+    ctx.fillText('Press Enter to Start', canvas.width / 2, canvas.height / 2 + 50);
+}
+
+function drawPauseMenu() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Paused', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillStyle = 'yellow';
+    ctx.font = '30px Arial';
+    ctx.fillText('Press Escape to Resume', canvas.width / 2, canvas.height / 2 + 50);
+    ctx.fillText('Press R to Restart', canvas.width / 2, canvas.height / 2 + 100);
+    ctx.fillText('Press M to Main Menu', canvas.width / 2, canvas.height / 2 + 150);
+}
+
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawBackground();
-    drawPlayer();
-    drawBullets();
-    drawEnemies();
-    drawPlayerHealth();
-    drawLevelInfo();
 
-    updatePlayer();
-    updateBullets();
-    updateEnemies();
-    checkLevelProgression();
+    if (gameState === 'mainMenu') {
+        drawMainMenu();
+    } else if (gameState === 'playing') {
+        drawBackground();
+        drawPlayer();
+        drawBullets();
+        drawEnemies();
+        drawPlayerHealth();
+        drawLevelInfo();
+        updatePlayer();
+        updateBullets();
+        updateEnemies();
+        checkLevelProgression();
+    } else if (gameState === 'paused') {
+        drawBackground();
+        drawPlayer();
+        drawBullets();
+        drawEnemies();
+        drawPlayerHealth();
+        drawLevelInfo();
+        drawPauseMenu();
+    }
 
     requestAnimationFrame(gameLoop);
 }
 
-window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') shootBullet();
-});
-
-enemies = initializeEnemiesForLevel(currentLevel);
 gameLoop();
