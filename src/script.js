@@ -32,7 +32,7 @@ player.sprite.src = 'player.png';
 
 const playerHealth = {
     current: 10,
-    max: 10,
+    max: 12,
 };
 
 const bullets = [];
