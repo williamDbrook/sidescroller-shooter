@@ -5,27 +5,26 @@ const backgroundImage = new Image();
 backgroundImage.src = 'bg.png';
 
 let backgroundX = 0;
-let gameState = 'mainMenu'; // 'mainMenu', 'playing', 'paused'
+let gameState = 'mainMenu'; // 'mainMenu', 'playing', 'paused', 'storeScreen'
 
-// --- Player properties ---
 const player = {
     x: 100,
     y: canvas.height / 2 - 25,
-    width: 75,
-    height: 75,
-    speed: 3.5,
+    width: 100,
+    height: 100,
+    speed: 5,
     dx: 0,
     dy: 0,
     sprite: new Image(),
     frameX: 0,
     frameY: 0,
     frameWidth: 230,
-    frameHeight: 168,
+    frameHeight: 170,
     facingRight: true,
     animationTimer: 0,
-    animationSpeed: 6.5,
-    totalFrames: 14, // Total frames including idle frame
-    idleFrame: 13,   // The index of the idle frame
+    animationSpeed: 3.4,
+    totalFrames: 14, 
+    idleFrame: 13,  
 };
 player.sprite.src = 'player.png';
 
@@ -34,54 +33,59 @@ const playerHealth = {
     max: 10,
 };
 
-function drawPlayerHealth() {
-    ctx.fillStyle = 'black';
-    ctx.fillRect(10, 10, 200, 20);
-    ctx.fillStyle = 'green';
-    ctx.fillRect(10, 10, (playerHealth.current / playerHealth.max) * 200, 20); // Health bar
-    ctx.strokeStyle = 'white';
-    ctx.strokeRect(10, 10, 200, 20); 
-}
+let currentLevel = 1;
+let enemiesCleared = false;
 
 const enemyAttackRange = 50;
 const enemyAttackCooldown = 1000;
 
 const bullets = [];
 const bulletSpeed = 10;
-let shootCooldown = 200; // Initial shoot cooldown
+let shootCooldown = 200; 
 let lastShotTime = 0;
 
 let enemies = [];
 let isMovingToNextLevel = false;
 
-const MIN_SAFE_DISTANCE = 100; // Minimum safe distance for enemy spawns
+const MIN_SAFE_DISTANCE = 100; 
 
 const keys = {};
 window.addEventListener('keydown', (e) => keys[e.key] = true);
 window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space' && gameState === 'playing') shootBullet();
-    if (gameState === 'mainMenu' && e.code === 'Enter') {
-        gameState = 'playing';
-        enemies = initializeEnemiesForLevel(currentLevel);
-    }
-    if (gameState === 'playing' && e.code === 'Escape') {
-        togglePause();
-    } else if (gameState === 'paused' && e.code === 'Escape') {
-        togglePause();
-    }
-    if (gameState === 'paused' && e.code === 'KeyR') {
-        gameState = 'playing';
-        resetGame();
-    }
-    if (gameState === 'paused' && e.code === 'KeyM') {
-        gameState = 'mainMenu';
-        resetGame();
+    if (gameState === 'playing') {
+        if (e.code === 'Space') shootBullet();
+        if (enemiesCleared && e.code === 'Enter' && isPlayerAtStorePosition()) {
+            gameState = 'storeScreen'; // Enter store screen
+            console.log("Entering store screen");
+        }
+        if (e.code === 'Escape') {
+            togglePause();
+        }
+    } else if (gameState === 'storeScreen') {
+        if (e.code === 'KeyB') {
+            gameState = 'playing'; // Return to game
+            console.log("Returning from store to game");
+        }
+    } else if (gameState === 'mainMenu') {
+        if (e.code === 'Enter') {
+            gameState = 'playing';
+            enemies = initializeEnemiesForLevel(currentLevel);
+        }
+    } else if (gameState === 'paused') {
+        if (e.code === 'Escape') {
+            togglePause();
+        } else if (e.code === 'KeyR') {
+            gameState = 'playing';
+            resetGame();
+        } else if (e.code === 'KeyM') {
+            gameState = 'mainMenu';
+            resetGame();
+        }
     }
 });
 
-// --- Cheat Codes Console ---
 const cheatConsole = document.createElement('input');
 cheatConsole.type = 'text';
 cheatConsole.style.position = 'absolute';
@@ -111,8 +115,8 @@ function processCheatCode(command) {
             console.log('Infinite ammo activated!');
             break;
         case 'nextlevel':
+            console.log('Next level cheat code activated!');
             triggerLevelChange();
-            console.log('Skipped to next level!');
             break;
         case 'killall':
             enemies = [];
@@ -135,106 +139,68 @@ function togglePause() {
     }
 }
 
-function drawBackground() {
-    let backgroundWidth = canvas.width;
-    let backgroundHeight = canvas.height;
-
-    let x = backgroundX % backgroundWidth;
-    if (x > 0) x -= backgroundWidth; // Ensure seamless repetition
-
-    while (x < canvas.width) {
-        ctx.drawImage(backgroundImage, x, 0, backgroundWidth, backgroundHeight);
-        x += backgroundWidth;
-    }
-}
-
-function drawPlayer() {
-    ctx.save();
-
-    // Calculate scaling factor based on y-coordinate
-    const maxScale = 2;     // Maximum scale factor when player is at the bottom
-    const minScale = 0.5;   // Minimum scale factor when player is at the top
-    const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
-    
-    const drawWidth = player.width * scale;
-    const drawHeight = player.height * scale;
-
-    if (!player.facingRight) {
-        ctx.scale(-1, 1);
-        ctx.drawImage(
-            player.sprite,
-            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-            -player.x - drawWidth, player.y, drawWidth, drawHeight
-        );
-    } else {
-        ctx.drawImage(
-            player.sprite,
-            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
-            player.x, player.y, drawWidth, drawHeight
-        );
-    }
-    ctx.restore();
-}
-
 function updatePlayerSprite() {
     player.animationTimer++;
     if (player.animationTimer >= player.animationSpeed) {
         player.animationTimer = 0;
         if (player.dx !== 0 || player.dy !== 0) {
-            player.frameX = (player.frameX + 1) % (player.totalFrames - 1); // Loop through walking frames
+            player.frameX = (player.frameX + 1) % (player.totalFrames - 1); 
         } else {
-            player.frameX = player.idleFrame; // Switch to idle frame
+            player.frameX = player.idleFrame; 
         }
     }
 }
 
 function updatePlayer() {
-    if (isMovingToNextLevel) {
+    // Calculate player dimensions based on the y-coordinate
+    const playerHeight = calculatePlayerHeight(player.y);
+    const playerWidth = calculatePlayerWidth(player.y);
+
+    player.dx = 0;
+    player.dy = 0;
+
+    // Handle movement
+    if (keys['ArrowUp'] || keys['w']) player.dy = -player.speed;
+    if (keys['ArrowDown'] || keys['s']) player.dy = player.speed;
+    if (keys['ArrowLeft'] || keys['a']) {
+        player.dx = -player.speed;
+        player.facingRight = false;
+    }
+    if (keys['ArrowRight'] || keys['d']) {
         player.dx = player.speed;
         player.facingRight = true;
-
-        player.x += player.dx;
-        backgroundX -= player.speed / 2; // Move the background to the left to show progress
-
-        if (player.x + player.width > canvas.width) {
-            player.x = canvas.width - player.width;
-            triggerLevelChange();  // Trigger level change when reaching the right edge
-        }
-        
-        updatePlayerSprite(); // Animate player sprite during transition
-    } else {
-        player.dx = 0;
-        player.dy = 0;
-
-        if (keys['ArrowUp'] || keys['w']) player.dy = -player.speed;
-        if (keys['ArrowDown'] || keys['s']) player.dy = player.speed;
-        if (keys['ArrowLeft'] || keys['a']) {
-            player.dx = -player.speed;
-            player.facingRight = false;
-        }
-        if (keys['ArrowRight'] || keys['d']) {
-            player.dx = player.speed;
-            player.facingRight = true;
-        }
-
-        player.x += player.dx;
-        player.y += player.dy;
-
-        // Calculate scaling factor based on y-coordinate
-        const maxScale = 2;     // Maximum scale factor when player is at the bottom
-        const minScale = 0.5;   // Minimum scale factor when player is at the top
-        const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
-        const drawHeight = player.height * scale;
-
-        // Prevent player from moving above a certain y-coordinate (e.g., 50 pixels from the top)
-        const minY = 170;
-        if (player.x < 0) player.x = 0;
-        if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
-        if (player.y < minY) player.y = minY;
-        if (player.y + drawHeight > canvas.height) player.y = canvas.height - drawHeight;
-
-        updatePlayerSprite();
     }
+
+    // Move player
+    player.x += player.dx;
+    player.y += player.dy;
+
+    // Prevent player from moving off the screen (left, right, top, bottom)
+    const minY = 170;
+    const maxY = 445;
+    if (player.x < 0) player.x = 0;
+    if (player.x + playerWidth > canvas.width) player.x = canvas.width - playerWidth;
+    if (player.y < minY) player.y = minY;
+    if (player.y > maxY) player.y = maxY;
+
+    // Check if player is at the right edge of the screen to proceed to the next level
+    if (enemiesCleared && player.x + playerWidth >= canvas.width) {
+        console.log("Player reached the right edge, proceeding to next level");
+        triggerLevelChange();
+    }
+
+    updatePlayerSprite();
+}
+
+// Example functions to calculate player dimensions based on the y-coordinate
+function calculatePlayerHeight(y) {
+    // Replace this with your actual logic for calculating player height
+    return 50 + (y / canvas.height) * 20; // Example: player height increases with y-coordinate
+}
+
+function calculatePlayerWidth(y) {
+    // Replace this with your actual logic for calculating player width
+    return 50 + (y / canvas.height) * 20; // Example: player width increases with y-coordinate
 }
 
 function shootBullet() {
@@ -251,29 +217,10 @@ function shootBullet() {
     }
 }
 
-function drawBullets() {
-    bullets.forEach(bullet => {
-        ctx.fillStyle = 'yellow';
-        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-    });
-}
-
 function updateBullets() {
     bullets.forEach((bullet, index) => {
         bullet.x += bullet.speed;
         if (bullet.x < 0 || bullet.x > canvas.width) bullets.splice(index, 1);
-    });
-}
-
-function drawEnemies() {
-    enemies.forEach(enemy => {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-
-        ctx.fillStyle = 'black';
-        ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
-        ctx.fillStyle = 'green';
-        ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / 3) * enemy.width, 5);
     });
 }
 
@@ -337,16 +284,33 @@ function resetGame() {
     enemies = initializeEnemiesForLevel(currentLevel);
     bullets.length = 0; 
     backgroundX = 0; 
-    shootCooldown = 200; // Reset shoot cooldown
+    shootCooldown = 200; 
 }
 
-let currentLevel = 1;
-let enemiesCleared = false;
+function checkLevelProgression() {
+    if (enemies.length === 0 && !enemiesCleared) {
+        enemiesCleared = true;
+        // Player can now move to the upper middle part of the screen to visit the store or proceed to the next level.
+    }
+}
 
-function drawLevelInfo() {
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Level: ${currentLevel}`, canvas.width - 100, 30);
+function isPlayerAtStorePosition() {
+    return player.x >= STORE_POSITION.x - player.width / 2 &&
+           player.x <= STORE_POSITION.x + player.width / 2 &&
+           player.y >= STORE_POSITION.y - player.height / 2 &&
+           player.y <= STORE_POSITION.y + player.height / 2;
+}
+
+function triggerLevelChange() {
+    console.log("Triggering level change");
+    backgroundX = 0;  // Reset background position
+    currentLevel++;
+    console.log("Current Level: " + currentLevel);
+    enemies = initializeEnemiesForLevel(currentLevel);
+    player.x = 0;  // Reset player position to the left side
+    enemiesCleared = false;
+    gameState = 'playing'; // Ensure game state is set to playing
+    console.log("Level changed successfully");
 }
 
 function initializeEnemiesForLevel(level) {
@@ -355,7 +319,6 @@ function initializeEnemiesForLevel(level) {
     const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); // Increase enemies based on level
 
     const baseHealth = 3; // Base health for enemies
-
     const baseSpeed = 1; // Base speed for enemies
 
     const enemies = [];
@@ -385,23 +348,111 @@ function initializeEnemiesForLevel(level) {
         });
     }
 
+    console.log("Enemies initialized for level " + level + ": ", enemies);
     return enemies;
 }
+
 
 function checkLevelProgression() {
     if (enemies.length === 0 && !enemiesCleared) {
         enemiesCleared = true;
-        isMovingToNextLevel = true; // Start moving to the next level
     }
 }
 
-function triggerLevelChange() {
-    isMovingToNextLevel = false;
-    backgroundX = 0;  // Reset background position
-    currentLevel++;
-    enemies = initializeEnemiesForLevel(currentLevel);
-    player.x = 0;  // Reset player position to the left side
-    enemiesCleared = false;
+window.addEventListener('keydown', (e) => {
+    if (gameState === 'playing' && enemiesCleared) {
+        if (e.code === 'Enter' && isPlayerAtStorePosition()) {
+            gameState = 'storeScreen'; // Enter store screen
+        }
+    } else if (gameState === 'storeScreen') {
+        if (e.code === 'KeyB') {
+            gameState = 'playing'; // Return to game
+        }
+    }
+    // Other key event listeners...
+});
+
+function isPlayerInStoreEntryZone() {
+    return (
+        player.x + player.width / 2 >= storeEntryZone.x &&
+        player.x + player.width / 2 <= storeEntryZone.x + storeEntryZone.width &&
+        player.y <= storeEntryZone.y + storeEntryZone.height
+    );
+}
+
+function drawBullets() {
+    bullets.forEach(bullet => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+    });
+}
+
+function drawBackground() {
+    let backgroundWidth = canvas.width;
+    let backgroundHeight = canvas.height;
+
+    let x = backgroundX % backgroundWidth;
+    if (x > 0) x -= backgroundWidth; 
+
+    while (x < canvas.width) {
+        ctx.drawImage(backgroundImage, x, 0, backgroundWidth, backgroundHeight);
+        x += backgroundWidth;
+    }
+}
+
+function drawPlayer() {
+    ctx.save();
+
+    
+    const maxScale = 2;     
+    const minScale = 0.5;  
+    const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
+    
+    const drawWidth = player.width * scale;
+    const drawHeight = player.height * scale;
+
+    if (!player.facingRight) {
+        ctx.scale(-1, 1);
+        ctx.drawImage(
+            player.sprite,
+            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
+            -player.x - drawWidth, player.y, drawWidth, drawHeight
+        );
+    } else {
+        ctx.drawImage(
+            player.sprite,
+            player.frameX * player.frameWidth, 0, player.frameWidth, player.frameHeight,
+            player.x, player.y, drawWidth, drawHeight
+        );
+    }
+    ctx.restore();
+}
+
+function drawEnemies() {
+    enemies.forEach(enemy => {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+        ctx.fillStyle = 'black';
+        ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
+        ctx.fillStyle = 'green';
+        ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / 3) * enemy.width, 5);
+    });
+}
+
+function drawPlayerHealth() {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(10, 10, 200, 20);
+    ctx.fillStyle = 'green';
+    ctx.fillRect(10, 10, (playerHealth.current / playerHealth.max) * 200, 20); 
+    ctx.strokeStyle = 'white';
+    ctx.strokeRect(10, 10, 200, 20); 
+}
+
+function drawLevelInfo() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Level: ${currentLevel}`, canvas.width - 100, 30);
 }
 
 function drawMainMenu() {
@@ -431,12 +482,35 @@ function drawPauseMenu() {
     ctx.fillText('Press M to Main Menu', canvas.width / 2, canvas.height / 2 + 150);
 }
 
+const STORE_POSITION = { x: canvas.width / 2 - 37.5, y: 160 }; // Upper middle part of the screen
+
+function drawStoreScreen() {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'white';
+    ctx.font = '40px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Store', canvas.width / 2, 50);
+
+    ctx.font = '30px Arial';
+    ctx.fillText('1. Buy Health Potion (Press 1)', canvas.width / 2, 150);
+    ctx.fillText('2. Buy Ammo (Press 2)', canvas.width / 2, 200);
+    ctx.fillText('Press B to go back', canvas.width / 2, 300);
+}
+
+function drawStorePosition() {
+    ctx.fillStyle = 'rgba(0, 0, 255, 0.5)'; // Blue color with 50% opacity
+    ctx.fillRect(STORE_POSITION.x, 110, 75, 100);
+}
+
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === 'mainMenu') {
         drawMainMenu();
     } else if (gameState === 'playing') {
+        console.log("Game state: playing");
         drawBackground();
         drawPlayer();
         drawBullets();
@@ -447,7 +521,11 @@ function gameLoop() {
         updateBullets();
         updateEnemies();
         checkLevelProgression();
+        if (enemiesCleared) {
+            drawStorePosition();
+        }
     } else if (gameState === 'paused') {
+        console.log("Game state: paused");
         drawBackground();
         drawPlayer();
         drawBullets();
@@ -455,6 +533,9 @@ function gameLoop() {
         drawPlayerHealth();
         drawLevelInfo();
         drawPauseMenu();
+    } else if (gameState === 'storeScreen') {
+        console.log("Game state: storeScreen");
+        drawStoreScreen();
     }
 
     requestAnimationFrame(gameLoop);
