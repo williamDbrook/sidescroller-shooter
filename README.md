@@ -12,3 +12,8 @@ A side scrolling 2.5D shooter made in javascript.
 - version 0.3 - The sprite is in a okay condition. I also added a pause menu and a main menu. A cheat console and some cheat codes have also been added
 	      - The background is also done it looks ok not great but ok. Tbh I forgor what I did sooo yeah. So stuff I want to get done is: enemy sprites
 	      - items, item store that randomly appears, maybe sound effects
+- version 0.4 - I added a store and multiple ammo types. I also made the enemies taller. So they arent a square but a rectangle so it at least looks like 
+		something vaguely humanoid I guess. Also some cheat codes for the purpose of easier testing maybe Ill leave them there. But I want to add
+		multiple "stores" so when you defeat all enemies there is random chance on what establishment you can visit. The enemy sprites are still
+		on the to-do list but I hate doing sprites so much so it will probably take untill before the game is complete :/ Anyways so stuff I want
+		to get done: the enemy sprites, multiple establishments, maybe sound effects, shooting animation for the player, enemy types 
