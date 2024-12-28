@@ -25,6 +25,8 @@ const player = {
     animationSpeed: 3.4,
     totalFrames: 14, 
     idleFrame: 13,  
+    lastShootTime: 0,
+    shootCooldown: 200
 };
 player.sprite.src = 'player.png';
 
@@ -33,16 +35,38 @@ const playerHealth = {
     max: 10,
 };
 
+const bullets = [];
+const bulletSpeed = 10;
+let shootCooldown = 200; 
+let lastShootTime = 0;
+
+const ammoTypes = {
+    standard: { damage: 1, penetration: false, cost: 0 },
+    highDamage: { damage: 3, penetration: false, cost: 3 },
+    penetration: { damage: 1, penetration: true, cost: 5 },
+};
+
+let selectedAmmoType = 'standard';
+const ammoInventory = {
+    standard: Infinity, // Infinite ammo for standard
+    highDamage: 0,
+    penetration: 0,
+};
+
+const storeItems = {
+    healthPotion: { price: 5, effect: () => { player.health += 20; } },
+    highDamageAmmo: { price: 3, effect: () => { ammoInventory.highDamage += 5; } },
+    penetrationAmmo: { price: 5, effect: () => { ammoInventory.penetration += 5; } },
+};
+
+let playerCurrency = 0; 
+
 let currentLevel = 1;
 let enemiesCleared = false;
 
 const enemyAttackRange = 50;
 const enemyAttackCooldown = 1000;
 
-const bullets = [];
-const bulletSpeed = 10;
-let shootCooldown = 200; 
-let lastShotTime = 0;
 
 let enemies = [];
 let isMovingToNextLevel = false;
@@ -50,21 +74,42 @@ let isMovingToNextLevel = false;
 const MIN_SAFE_DISTANCE = 100; 
 
 const keys = {};
-window.addEventListener('keydown', (e) => keys[e.key] = true);
-window.addEventListener('keyup', (e) => keys[e.key] = false);
 
 window.addEventListener('keydown', (e) => {
+    keys[e.code] = true;
+    console.log(`Key down: ${e.code}`); // Debugging statement
+
+    // Handle specific key events based on game state
     if (gameState === 'playing') {
-        if (e.code === 'Space') shootBullet();
-        if (enemiesCleared && e.code === 'Enter' && isPlayerAtStorePosition()) {
+        if (e.code === 'Space') { // Space bar is bound to shooting
+            shootBullet();
+        }
+        if (e.code === 'Enter' && enemiesCleared && isPlayerAtStorePosition()) {
             gameState = 'storeScreen'; // Enter store screen
             console.log("Entering store screen");
         }
         if (e.code === 'Escape') {
             togglePause();
         }
+        // Switch ammo types
+        if (e.code === 'Digit1') {
+            selectedAmmoType = 'standard';
+            console.log('Switched to standard ammo.');
+        } else if (e.code === 'Digit2') {
+            selectedAmmoType = 'highDamage';
+            console.log('Switched to high damage ammo.');
+        } else if (e.code === 'Digit3') {
+            selectedAmmoType = 'penetration';
+            console.log('Switched to penetration ammo.');
+        }
     } else if (gameState === 'storeScreen') {
-        if (e.code === 'KeyB') {
+        if (e.code === 'Digit1') {
+            purchaseItem('healthPotion');
+        } else if (e.code === 'Digit2') {
+            purchaseItem('highDamageAmmo');
+        } else if (e.code === 'Digit3') {
+            purchaseItem('penetrationAmmo');
+        } else if (e.code === 'KeyB') {
             gameState = 'playing'; // Return to game
             console.log("Returning from store to game");
         }
@@ -84,6 +129,17 @@ window.addEventListener('keydown', (e) => {
             resetGame();
         }
     }
+
+    // Handle player entering store position
+    if (gameState === 'playing' && enemiesCleared && e.code === 'Enter' && isPlayerAtStorePosition()) {
+        gameState = 'storeScreen'; // Enter store screen
+    }
+});
+
+// Add a single event listener for keyup
+window.addEventListener('keyup', (e) => {
+    keys[e.code] = false;
+    console.log(`Key up: ${e.code}`); // Debugging statement
 });
 
 const cheatConsole = document.createElement('input');
@@ -105,8 +161,8 @@ cheatConsole.addEventListener('keydown', (e) => {
 });
 
 function processCheatCode(command) {
-    switch (command) {
-        case 'godmode':
+    switch (command.toLowerCase()) {
+        case 'god':
             playerHealth.current = Infinity;
             console.log('God mode activated!');
             break;
@@ -126,9 +182,28 @@ function processCheatCode(command) {
             shootCooldown = 2;
             console.log('Shoot cooldown set to 2!');
             break;
+        case 'ammo':
+            activateInfiniteAmmoTypes();
+            console.log('Infinite ammo types activated!');
+            break;
+        case 'money':
+            addCurrency(1000);
+            console.log('Added 1000 currency!');
+            break;
         default:
             console.log('Unknown cheat code!');
     }
+}
+
+function activateInfiniteAmmoTypes() {
+    ammoInventory.highDamage = Infinity;
+    ammoInventory.penetration = Infinity;
+    console.log('Infinite ammo activated for high damage and penetration ammo.');
+}
+
+function addCurrency(amount) {
+    playerCurrency += amount;
+    console.log(`Added ${amount} currency. Current currency: ${playerCurrency}`);
 }
 
 function togglePause() {
@@ -205,23 +280,93 @@ function calculatePlayerWidth(y) {
 
 function shootBullet() {
     const currentTime = Date.now();
-    if (currentTime - lastShotTime >= shootCooldown) {
-        bullets.push({
-            x: player.facingRight ? player.x + player.width : player.x,
-            y: player.y + player.height / 2,
-            width: 10,
-            height: 5,
-            speed: player.facingRight ? bulletSpeed : -bulletSpeed,
-        });
-        lastShotTime = currentTime;
+    if (currentTime - player.lastShootTime >= player.shootCooldown) {
+        if (ammoInventory[selectedAmmoType] > 0 || selectedAmmoType === 'standard') {
+            const ammo = ammoTypes[selectedAmmoType];
+            bullets.push({
+                x: player.facingRight ? player.x + player.width : player.x,
+                y: player.y + player.height / 2,
+                width: 10,
+                height: 5,
+                speed: player.facingRight ? 10 : -10, // Assuming a bullet speed of 10
+                damage: ammo.damage,
+                penetration: ammo.penetration,
+                hitEnemies: [] // Track enemies hit by this bullet
+            });
+            player.lastShootTime = currentTime; // Update the last shoot time
+
+            if (selectedAmmoType !== 'standard') {
+                ammoInventory[selectedAmmoType]--; // Reduce ammo count for non-standard ammo
+            }
+        }
+    }
+}
+
+function purchaseAmmo(type, amount) {
+    const ammo = ammoTypes[type];
+    const totalCost = ammo.cost * amount;
+    if (playerCurrency >= totalCost) {
+        playerCurrency -= totalCost;
+        ammoInventory[type] += amount;
+        console.log(`Purchased ${amount} ${type} ammo for ${totalCost} currency.`);
+    } else {
+        console.log('Not enough currency to purchase ammo.');
+    }
+}
+
+function purchaseItem(itemKey) {
+    const item = storeItems[itemKey];
+    if (playerCurrency >= item.price) {
+        playerCurrency -= item.price;
+        item.effect();
+        console.log(`Purchased ${itemKey}. Current currency: ${playerCurrency}`);
+    } else {
+        console.log(`Not enough currency to buy ${itemKey}. Current currency: ${playerCurrency}`);
+    }
+}
+
+function handleShooting() {
+    if (keys['Space']) { // Check if space bar is pressed
+        shootBullet();
     }
 }
 
 function updateBullets() {
-    bullets.forEach((bullet, index) => {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        const bullet = bullets[i];
         bullet.x += bullet.speed;
-        if (bullet.x < 0 || bullet.x > canvas.width) bullets.splice(index, 1);
-    });
+
+        // Check for collisions with enemies
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const enemy = enemies[j];
+
+            if (bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y) {
+                
+                if (!bullet.hitEnemies.includes(enemy)) {
+                    enemy.health -= bullet.damage;
+                    bullet.hitEnemies.push(enemy); // Track this enemy as hit
+
+                    if (enemy.health <= 0) {
+                        enemies.splice(j, 1); // Remove enemy if health is zero or less
+                    }
+
+                    // If the bullet is not a penetration bullet, remove it
+                    if (!bullet.penetration) {
+                        bullets.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Remove bullet if it goes off-screen
+        if (bullet.x < 0 || bullet.x > canvas.width) {
+            bullets.splice(i, 1);
+        }
+    }
 }
 
 function updateEnemies() {
@@ -290,7 +435,8 @@ function resetGame() {
 function checkLevelProgression() {
     if (enemies.length === 0 && !enemiesCleared) {
         enemiesCleared = true;
-        // Player can now move to the upper middle part of the screen to visit the store or proceed to the next level.
+        playerCurrency += 2; // Grant 2 currency when the level is cleared
+        console.log(`Level cleared! Player currency: ${playerCurrency}`); // Debugging statement
     }
 }
 
@@ -342,7 +488,7 @@ function initializeEnemiesForLevel(level) {
             x: spawnX,
             y: spawnY,
             width: 50,
-            height: 50,
+            height: 100, // Make enemies taller by increasing the height
             health: baseHealth,
             lastAttackTime: 0,
         });
@@ -351,26 +497,6 @@ function initializeEnemiesForLevel(level) {
     console.log("Enemies initialized for level " + level + ": ", enemies);
     return enemies;
 }
-
-
-function checkLevelProgression() {
-    if (enemies.length === 0 && !enemiesCleared) {
-        enemiesCleared = true;
-    }
-}
-
-window.addEventListener('keydown', (e) => {
-    if (gameState === 'playing' && enemiesCleared) {
-        if (e.code === 'Enter' && isPlayerAtStorePosition()) {
-            gameState = 'storeScreen'; // Enter store screen
-        }
-    } else if (gameState === 'storeScreen') {
-        if (e.code === 'KeyB') {
-            gameState = 'playing'; // Return to game
-        }
-    }
-    // Other key event listeners...
-});
 
 function isPlayerInStoreEntryZone() {
     return (
@@ -433,6 +559,7 @@ function drawEnemies() {
         ctx.fillStyle = 'red';
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
 
+        // Draw health bar
         ctx.fillStyle = 'black';
         ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
         ctx.fillStyle = 'green';
@@ -485,23 +612,38 @@ function drawPauseMenu() {
 const STORE_POSITION = { x: canvas.width / 2 - 37.5, y: 160 }; // Upper middle part of the screen
 
 function drawStoreScreen() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(400, 0, canvas.width, canvas.height);
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'black';
+    ctx.fillText('Store - Press B to go back', 400, 30);
 
-    ctx.fillStyle = 'white';
-    ctx.font = '40px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Store', canvas.width / 2, 50);
+    const items = Object.keys(storeItems);
+    items.forEach((item, index) => {
+        ctx.fillText(`${index + 1}. Buy ${item} (Price: ${storeItems[item].price})`, 400, 60 + index * 30);
+    });
 
-    ctx.font = '30px Arial';
-    ctx.fillText('1. Buy Health Potion (Press 1)', canvas.width / 2, 150);
-    ctx.fillText('2. Buy Ammo (Press 2)', canvas.width / 2, 200);
-    ctx.fillText('Press B to go back', canvas.width / 2, 300);
+    ctx.fillText(`Current Currency: ${playerCurrency}`, 400, 60 + items.length * 30);
 }
-
 function drawStorePosition() {
     ctx.fillStyle = 'rgba(0, 0, 255, 0.5)'; // Blue color with 50% opacity
     ctx.fillRect(STORE_POSITION.x, 110, 75, 100);
+}
+
+function drawAmmoType() {
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(`Ammo Type: ${selectedAmmoType}`, 90, 50); // Display the selected ammo type
+
+    // Display ammo counts for each type
+    ctx.fillText(`Standard Ammo: ${ammoInventory.standard === Infinity ? '∞' : ammoInventory.standard}`, 90, 80);
+    ctx.fillText(`High Damage Ammo: ${ammoInventory.highDamage}`, 110, 110);
+    ctx.fillText(`Penetration Ammo: ${ammoInventory.penetration}`, 100, 140);
+}
+
+function drawCurrency() {
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'white';
+    ctx.fillText(`Currency: ${playerCurrency}`, 700, 60); // Display the currency at the top-left corner
 }
 
 function gameLoop() {
@@ -510,22 +652,23 @@ function gameLoop() {
     if (gameState === 'mainMenu') {
         drawMainMenu();
     } else if (gameState === 'playing') {
-        console.log("Game state: playing");
         drawBackground();
         drawPlayer();
         drawBullets();
         drawEnemies();
         drawPlayerHealth();
         drawLevelInfo();
-        updatePlayer();
+        updatePlayer();   // Handle player movement
+        handleShooting(); // Handle player shooting
         updateBullets();
         updateEnemies();
         checkLevelProgression();
+        drawAmmoType(); // Display the current ammo type
+        drawCurrency(); // Display the player's currency
         if (enemiesCleared) {
             drawStorePosition();
         }
     } else if (gameState === 'paused') {
-        console.log("Game state: paused");
         drawBackground();
         drawPlayer();
         drawBullets();
@@ -534,7 +677,6 @@ function gameLoop() {
         drawLevelInfo();
         drawPauseMenu();
     } else if (gameState === 'storeScreen') {
-        console.log("Game state: storeScreen");
         drawStoreScreen();
     }
 
