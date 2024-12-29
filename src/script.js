@@ -1,5 +1,101 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const enemySpriteSheet = new Image();
+enemySpriteSheet.src = 'enemy.png'; // Provide the correct path to your sprite sheet
+
+const spriteSheet = {
+    frameWidth: 180,
+    frameHeight: 150,
+    frameCount: 14,
+    currentFrame: 0,
+    animationSpeed: 80,
+    lastUpdateTime: 0,  
+};
+
+const enemies = [
+    { x: 100, y: 100, dx: 0, dy: 0, animationTimer: 0, animationSpeed: 5, frameX: 0, totalFrames: 10, idleFrame: 0, speed: 2, facingLeft: false },
+    // Add more enemies if needed
+];
+
+function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
+    if (enemy.facingLeft) {
+        // Save the current context state
+        ctx.save();
+
+        // Flip the context horizontally
+        ctx.scale(-1, 1);
+
+        // Draw the sprite with flipped coordinates
+        ctx.drawImage(
+            enemySpriteSheet,
+            frameX * spriteSheet.frameWidth, // Source X
+            frameY * spriteSheet.frameHeight, // Source Y
+            spriteSheet.frameWidth, // Source Width
+            spriteSheet.frameHeight, // Source Height
+            -enemy.x - spriteSheet.frameWidth, // Destination X (flipped)
+            enemy.y, // Destination Y
+            spriteSheet.frameWidth, // Destination Width
+            spriteSheet.frameHeight // Destination Height
+        );
+
+        // Restore the context state
+        ctx.restore();
+    } else {
+        ctx.drawImage(
+            enemySpriteSheet,
+            frameX * spriteSheet.frameWidth, // Source X
+            frameY * spriteSheet.frameHeight, // Source Y
+            spriteSheet.frameWidth, // Source Width
+            spriteSheet.frameHeight, // Source Height
+            enemy.x, // Destination X
+            enemy.y, // Destination Y
+            spriteSheet.frameWidth, // Destination Width
+            spriteSheet.frameHeight // Destination Height
+        );
+    }
+}
+
+// Function to update the current frame of the sprite
+function updateEnemyAnimation(spriteSheet, timestamp) {
+    if (timestamp - spriteSheet.lastUpdateTime > spriteSheet.animationSpeed) {
+        spriteSheet.currentFrame = (spriteSheet.currentFrame + 1) % spriteSheet.frameCount;
+        spriteSheet.lastUpdateTime = timestamp;
+    }
+}
+
+function updateEnemyPositions(enemies, player) {
+    enemies.forEach(enemy => {
+        // Calculate direction vector from enemy to player
+        const directionX = player.x - enemy.x;
+        const directionY = player.y - enemy.y;
+        const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
+        
+        // Normalize direction vector
+        if (magnitude > 0) {
+            enemy.dx = (directionX / magnitude) * enemy.speed;
+            enemy.dy = (directionY / magnitude) * enemy.speed;
+        } else {
+            enemy.dx = 0;
+            enemy.dy = 0;
+        }
+
+        // Update enemy position
+        enemy.x += enemy.dx;
+        enemy.y += enemy.dy;
+
+        // Update facing direction
+        if (enemy.dx > 0) {
+            enemy.facingLeft = false; // Facing right
+        } else if (enemy.dx < 0) {
+            enemy.facingLeft = true;  // Facing left
+        }
+
+        // Ensure x and y remain numbers
+        if (isNaN(enemy.x) || isNaN(enemy.y)) {
+            console.error('Invalid position values:', enemy.x, enemy.y);
+        }
+    });
+}
 
 const backgroundImage = new Image();
 backgroundImage.src = 'bg.png';
@@ -18,11 +114,11 @@ const player = {
     sprite: new Image(),
     frameX: 0,
     frameY: 0,
-    frameWidth: 230,
+    frameWidth: 231,
     frameHeight: 170,
     facingRight: true,
     animationTimer: 0,
-    animationSpeed: 3.4,
+    animationSpeed: 8,
     totalFrames: 14, 
     idleFrame: 13,  
     lastShootTime: 0,
@@ -68,7 +164,6 @@ const enemyAttackRange = 50;
 const enemyAttackCooldown = 1000;
 
 
-let enemies = [];
 let isMovingToNextLevel = false;
 
 const MIN_SAFE_DISTANCE = 100; 
@@ -506,6 +601,18 @@ function isPlayerInStoreEntryZone() {
     );
 }
 
+function updateSprite(sprite) {
+    sprite.animationTimer++;
+    if (sprite.animationTimer >= sprite.animationSpeed) {
+        sprite.animationTimer = 0;
+        if (sprite.dx !== 0 || sprite.dy !== 0) {
+            sprite.frameX = (sprite.frameX + 1) % sprite.totalFrames; 
+        } else {
+            sprite.frameX = sprite.idleFrame; 
+        }
+    }
+}
+
 function drawBullets() {
     bullets.forEach(bullet => {
         ctx.fillStyle = 'yellow';
@@ -646,16 +753,27 @@ function drawCurrency() {
     ctx.fillText(`Currency: ${playerCurrency}`, 700, 60); // Display the currency at the top-left corner
 }
 
-function gameLoop() {
+function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (gameState === 'mainMenu') {
         drawMainMenu();
     } else if (gameState === 'playing') {
         drawBackground();
-        drawPlayer();
+        
+        updateSprite(player); // Update player sprite
+        drawPlayer(); // Ensure drawPlayer uses player.frameX for animation
+
         drawBullets();
-        drawEnemies();
+        updateEnemyAnimation(spriteSheet, timestamp); // Update enemy animation frame
+        updateEnemyPositions(enemies, player); // Update enemy positions to hunt the player
+
+        // Update and draw each enemy
+        enemies.forEach(enemy => {
+            updateSprite(enemy); // Update enemy sprite
+            drawEnemyFrame(ctx, spriteSheet, enemy, enemy.frameX, 0); // Draw enemy frame
+        });
+
         drawPlayerHealth();
         drawLevelInfo();
         updatePlayer();   // Handle player movement
@@ -663,7 +781,7 @@ function gameLoop() {
         updateBullets();
         updateEnemies();
         checkLevelProgression();
-        drawAmmoType(); // Display the current ammo type
+        drawAmmoType(); // Display the current ammo type and counts
         drawCurrency(); // Display the player's currency
         if (enemiesCleared) {
             drawStorePosition();
@@ -683,4 +801,7 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-gameLoop();
+// Start the game loop only after the sprite sheet has loaded
+enemySpriteSheet.onload = () => {
+    requestAnimationFrame(gameLoop);
+};
