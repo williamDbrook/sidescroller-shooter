@@ -17,3 +17,7 @@ A side scrolling 2.5D shooter made in javascript.
 		multiple "stores" so when you defeat all enemies there is random chance on what establishment you can visit. The enemy sprites are still
 		on the to-do list but I hate doing sprites so much so it will probably take untill before the game is complete :/ Anyways so stuff I want
 		to get done: the enemy sprites, multiple establishments, maybe sound effects, shooting animation for the player, enemy types 
+- version 0.5 - The enemy finally has a sprite. Multiple establishments have also been added so the player can now purchase ammo at the store,
+		heal by buying a meal at a restaurant, or rob a liquer store for a chance of making money or losing health. Some level progression
+		adjustments have also been made. So stuff I want to get done: establishment screens so they are not just white screens with black		
+		text in fucking arial, maybe attack aniamtions, maybe sound effects
