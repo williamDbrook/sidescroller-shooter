@@ -64,10 +64,12 @@ const ammoInventory = {
 };
 
 const storeItems = {
-    healthPotion: { price: 5, effect: () => { player.health += 20; } },
     highDamageAmmo: { price: 3, effect: () => { ammoInventory.highDamage += 5; } },
     penetrationAmmo: { price: 5, effect: () => { ammoInventory.penetration += 5; } },
 };
+
+let robberyOutcome = '';
+let robberyAttempted = false;
 
 let playerCurrency = 0; 
 
@@ -93,10 +95,7 @@ const spriteSheet = {
     lastUpdateTime: 0,  
 };
 
-let enemies = [
-    { x: 100, y: 100, dx: 0, dy: 0, animationTimer: 0, animationSpeed: 10, frameX: 0, totalFrames: 4, idleFrame: 0, speed: 1, facingLeft: false, width: 64, height: 64, health: 50, maxHealth: 50 },
-    // Add more enemies if needed
-];
+let enemies = [];
 
 function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
     if (enemy.facingLeft) {
@@ -133,6 +132,18 @@ function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
             spriteSheet.frameWidth, // Destination Width
             spriteSheet.frameHeight // Destination Height
         );
+    }
+}
+
+function getNumberOfEnemies(level) {
+    if (level >= 1 && level <= 4) {
+        return 0;
+    } else if (level >= 5 && level <= 8) {
+        return 0;
+    } else if (level >= 9 && level <= 12) {
+        return 1;
+    } else {
+        return 2;
     }
 }
 
@@ -297,10 +308,8 @@ window.addEventListener('keyup', (e) => {
 function handleEstablishmentInput(keyCode) {
     if (gameState === 'storeScreen') {
         if (keyCode === 'Digit1') {
-            purchaseItem('healthPotion');
-        } else if (keyCode === 'Digit2') {
             purchaseItem('highDamageAmmo');
-        } else if (keyCode === 'Digit3') {
+        } else if (keyCode === 'Digit2') {
             purchaseItem('penetrationAmmo');
         }
     } else if (gameState === 'restaurantScreen') {
@@ -705,23 +714,17 @@ function distanceBetween(x1, y1, x2, y2) {
 }
 
 function resetGame() {
-    // Reset player properties
-    player.x = 50;
-    player.y = canvas.height / 2;
+    player.x = 100;
+    player.y = canvas.height / 2 - 25;
     player.health = player.maxHealth;
-    player.score = 0;
-
-    // Clear enemies and bullets
-    enemies.length = 0;
-    bullets.length = 0;
-
-    // Reset game state
-    gameState = 'playing'; // Assuming 'playing' is the main game state
+    playerCurrency = 0; // Reset player currency
     currentLevel = 1;
     enemiesCleared = false;
-
-    // Trigger the first level
-    triggerLevelChange(currentLevel);
+    bullets.length = 0;
+    enemies = initializeEnemiesForLevel(currentLevel);
+    selectedEstablishment = null;
+    robberyAttempted = false;
+    gameState = 'playing'; 
 }
 
 function isPlayerAtStorePosition() {
@@ -802,43 +805,38 @@ function purchaseMeal() {
 }
 
 function robEstablishment() {
-    const robberyPenalty = 10;
-    const robberySuccess = Math.random() > 0.5; // 50% chance of success
-    if (robberySuccess) {
-        const stolenAmount = Math.floor(Math.random() * 10) + 1; // Random amount between 1 and 10
-        playerCurrency += stolenAmount;
-        console.log(`Robbery successful! Stolen amount: ${stolenAmount}, Player currency: ${playerCurrency}`);
-    } else {
-        player.health -= robberyPenalty;
-        console.log(`Robbery failed! Player health: ${player.health}`);
+    if (robberyAttempted) {
+        return; // Prevent multiple robbery attempts
     }
+    
+    robberyAttempted = true; // Mark robbery as attempted
+
+    const successChance = Math.random();
+    if (successChance > 0.5) {
+        playerCurrency += 10;
+        robberyOutcome = 'Robbery successful! You gained 10 currency.';
+    } else {
+        player.health -= 20;
+        robberyOutcome = 'Robbery failed! You lost 20 health.';
+    }
+
+    // Set a timeout to display the outcome before switching back to 'playing'
+    setTimeout(() => {
+        gameState = 'playing';
+        robberyOutcome = ''; // Reset robbery outcome
+        robberyAttempted = false; // Reset the flag when the player returns to playing
+    }, 2000); // Display the outcome for 2 seconds
 }
 
 function initializeEnemiesForLevel(level) {
-    const baseEnemyCount = 1; // Starting with 1 enemy
-    const maxEnemyCount = 20; // Maximum number of enemies
-    const enemyCount = Math.min(baseEnemyCount + level, maxEnemyCount); // Increase enemies based on level
+    const numberOfEnemies = getNumberOfEnemies(level);
+    const enemies = [];
 
-    let enemies = [];
-
-    for (let i = 0; i < enemyCount; i++) {
-        let spawnX, spawnY;
-        let safeDistance = false;
-
-        // Ensure the enemy spawns at a safe distance from the player
-        while (!safeDistance) {
-            spawnX = Math.random() * (canvas.width - 50);
-            spawnY = Math.random() * (canvas.height - 50);
-            const distance = distanceBetween(player.x + player.width / 2, player.y + player.height / 2, spawnX + 25, spawnY + 25);
-
-            if (distance >= MIN_SAFE_DISTANCE) {
-                safeDistance = true;
-            }
-        }
-
+    for (let i = 0; i < numberOfEnemies; i++) {
+        // Adjust enemy properties as needed
         enemies.push({
-            x: spawnX,
-            y: spawnY,
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
             dx: 0,
             dy: 0,
             animationTimer: 0,
@@ -855,7 +853,6 @@ function initializeEnemiesForLevel(level) {
         });
     }
 
-    console.log("Enemies initialized for level " + level + ": ", enemies); // Debugging statement
     return enemies;
 }
 
@@ -1025,8 +1022,11 @@ function drawRobberyScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '20px Arial';
     ctx.fillStyle = 'black';
-    ctx.fillText('Robbery - Press B to go back', 400, 30);
-    ctx.fillText('1. Attempt Robbery', 400, 60);
+    ctx.fillText('Robbery - Press B to go back', 20, 30);
+    ctx.fillText('1. Attempt Robbery', 20, 60);
+
+    // Display the robbery outcome
+    ctx.fillText(robberyOutcome, 20, 120);
 }
 
 function drawStorePosition() {
