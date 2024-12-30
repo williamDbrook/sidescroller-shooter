@@ -39,6 +39,12 @@ const gameState = {
     GAME_OVER: 'gameOver'
 };
 
+const meals = {
+    RED_FISH: { name: 'Red Fish', cost: 20, heal: 35 },
+    BEEF_SOUP: { name: 'Beef Soup', cost: 10, heal: 15 },
+    FRIED_PIRANHA: { name: 'Fried Piranha', cost: 70, heal: 'full' }
+};
+
 let currentGameState = gameState.MAIN_MENU;
 
 const player = {
@@ -242,7 +248,7 @@ function checkLevelProgression() {
     
     if (enemies.length === 0 && enemiesCleared && !progressionChecked) {
         // console.log("Enemies cleared condition met");
-        playerCurrency += 2; // Grant currency when the level is cleared
+        playerCurrency += 100; // Grant currency when the level is cleared
         console.log(`Level cleared! Player currency: ${playerCurrency}`);
 
         // Generate a random number between 1 and 100
@@ -295,6 +301,7 @@ function enterEstablishment() {
 
 window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
+    console.log(`Key pressed: ${e.code}, Current game state: ${currentGameState}`);
 
     if (currentGameState === gameState.PLAYING) {
         if (e.code === 'Space') {
@@ -320,11 +327,22 @@ window.addEventListener('keydown', (e) => {
             selectedAmmoType = 'penetration';
             console.log('Switched to penetration ammo.');
         }
-    } else if (currentGameState === gameState.STORE_SCREEN || currentGameState === gameState.RESTAURANT_SCREEN || currentGameState === gameState.ROBBERY_SCREEN) {
+    } else if (currentGameState === gameState.STORE_SCREEN || currentGameState === gameState.ROBBERY_SCREEN) {
         if (e.code === 'KeyB') {
             currentGameState = gameState.PLAYING;
         } else {
             handleEstablishmentInput(e.code);
+        }
+    } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
+        console.log(`Handling restaurant input for key: ${e.code}`);
+        if (e.code === 'Digit1') {
+            purchaseMeal(meals.RED_FISH);
+        } else if (e.code === 'Digit2') {
+            purchaseMeal(meals.BEEF_SOUP);
+        } else if (e.code === 'Digit3') {
+            purchaseMeal(meals.FRIED_PIRANHA);
+        } else if (e.code === 'KeyB') {
+            currentGameState = gameState.PLAYING;
         }
     } else if (currentGameState === gameState.MAIN_MENU) {
         if (e.code === 'Enter') {
@@ -788,10 +806,10 @@ function resetGame() {
 }
 
 function isPlayerAtStorePosition() {
-    return player.x >= STORE_POSITION.x &&
-           player.x <= STORE_POSITION.x + STORE_POSITION.width &&
-           player.y >= STORE_POSITION.y &&
-           player.y <= STORE_POSITION.y + STORE_POSITION.height;
+    return player.x < STORE_POSITION.x + STORE_POSITION.width &&
+           player.x + player.width > STORE_POSITION.x &&
+           player.y < STORE_POSITION.y + STORE_POSITION.height &&
+           player.y + player.height > STORE_POSITION.y;
 }
 
 function triggerLevelChange(level) {
@@ -852,15 +870,21 @@ function addEnemies(numberOfEnemies) {
     }
 }
 
-function purchaseMeal() {
-    const mealCost = 5;
-    const mealHealAmount = 20;
-    if (playerCurrency >= mealCost) {
-        playerCurrency -= mealCost;
-        player.health = Math.min(player.maxHealth, player.health + mealHealAmount);
-        console.log(`Purchased meal. Player health: ${player.health}, Player currency: ${playerCurrency}`);
+function purchaseMeal(meal) {
+    if (!meal) {
+        console.error('Meal is undefined');
+        return;
+    }
+    if (playerCurrency >= meal.cost) {
+        playerCurrency -= meal.cost;
+        if (meal.heal === 'full') {
+            player.health = player.maxHealth;
+        } else {
+            player.health = Math.min(player.health + meal.heal, player.maxHealth);
+        }
+        console.log(`Purchased ${meal.name}. Health: ${player.health}, Currency: ${playerCurrency}`);
     } else {
-        console.log("Not enough currency to purchase a meal.");
+        console.log(`Not enough currency to purchase ${meal.name}.`);
     }
 }
 
@@ -1043,11 +1067,17 @@ const STORE_POSITION = {
 function drawStoreScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(storeImg, 0, 0, canvas.width, canvas.height);
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'black';
+    ctx.fillText(`Wallet: ${playerCurrency}$`, 40, 550);
 }
 
 function drawRestaurantScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(restaurantScreenImg, 0, 0, canvas.width, canvas.height);
+    ctx.font = '20px Arial';
+    ctx.fillStyle = 'black';
+    ctx.fillText(`Wallet: ${playerCurrency}$`, 40, 550);
 }
 
 function drawRobberyScreen() {
@@ -1072,7 +1102,7 @@ function drawRobberyFailureScreen() {
 }
 
 function drawStorePosition() {
-    ctx.fillStyle = 'rgba(0, 0, 255, 0.5)'; // Blue color with 50% opacity
+    ctx.fillStyle = 'rgba(0, 0, 125, 0.5)'; // Semi-transparent green
     ctx.fillRect(STORE_POSITION.x, STORE_POSITION.y, STORE_POSITION.width, STORE_POSITION.height);
 }
 
