@@ -6,9 +6,40 @@ enemySpriteSheet.src = 'enemy.png'; // Provide the correct path to your sprite s
 const backgroundImage = new Image();
 backgroundImage.src = 'bg.png';
 
+const restaurantScreenImg = new Image();
+restaurantScreenImg.src = 'reastaurant_screen.png';
+
+const robberyScreenImg = new Image();
+robberyScreenImg.src = 'robberry_screen_wip.png';
+
+const robberySuccessImg = new Image();
+robberySuccessImg.src = 'robberry_screen_succes_wip.png';
+
+const robberyFailureImg = new Image();
+robberyFailureImg.src = 'robbery_screen_fail_wip.png';
+
+const storeImg = new Image();
+storeImg.src = 'store_screen.png';
+
+const hudImage = new Image();
+hudImage.src = 'hud.png';
+
 let backgroundX = 0;
-let gameState = 'playing'; // Possible states: 'playing', 'paused', 'mainMenu', 'storeScreen', 'gameOver'
 let progressionChecked = false; // New flag to ensure checkLevelProgression logic runs only once
+
+const gameState = {
+    MAIN_MENU: 'mainMenu',
+    PLAYING: 'playing',
+    PAUSED: 'paused',
+    STORE_SCREEN: 'storeScreen',
+    RESTAURANT_SCREEN: 'restaurantScreen',
+    ROBBERY_SCREEN: 'robberyScreen',
+    ROBBERY_SUCCESS: 'robberySuccess',
+    ROBBERY_FAILURE: 'robberyFailure',
+    GAME_OVER: 'gameOver'
+};
+
+let currentGameState = gameState.MAIN_MENU;
 
 const player = {
     x: 100,
@@ -49,6 +80,7 @@ const ESTABLISHMENTS = {
 };
 
 let currentEstablishment = null; // Tracks the current establishment
+let lastSelectedEstablishment = null;
 
 const ammoTypes = {
     standard: { damage: 15, penetration: false, cost: 0 },
@@ -96,6 +128,18 @@ const spriteSheet = {
 };
 
 let enemies = [];
+
+function selectRandomEstablishment() {
+    const establishments = Object.values(ESTABLISHMENTS);
+    let selected;
+
+    do {
+        selected = establishments[Math.floor(Math.random() * establishments.length)];
+    } while (selected === lastSelectedEstablishment);
+
+    lastSelectedEstablishment = selected;
+    return selected;
+}
 
 function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
     if (enemy.facingLeft) {
@@ -233,15 +277,16 @@ function checkLevelProgression() {
 }
 
 function enterEstablishment() {
+    selectedEstablishment = selectRandomEstablishment();
     console.log(`Entering establishment: ${selectedEstablishment}`);
     if (selectedEstablishment === ESTABLISHMENTS.STORE) {
-        gameState = 'storeScreen';
+        currentGameState = gameState.STORE_SCREEN;
         console.log("Entering store screen");
     } else if (selectedEstablishment === ESTABLISHMENTS.RESTAURANT) {
-        gameState = 'restaurantScreen';
+        currentGameState = gameState.RESTAURANT_SCREEN;
         console.log("Entering restaurant screen");
     } else if (selectedEstablishment === ESTABLISHMENTS.ROBBERY) {
-        gameState = 'robberyScreen';
+        currentGameState = gameState.ROBBERY_SCREEN;
         console.log("Entering robbery screen");
     } else {
         console.log("Error: Invalid establishment selected.");
@@ -251,7 +296,7 @@ function enterEstablishment() {
 window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
 
-    if (gameState === 'playing') {
+    if (currentGameState === gameState.PLAYING) {
         if (e.code === 'Space') {
             shootBullet();
         }
@@ -275,50 +320,63 @@ window.addEventListener('keydown', (e) => {
             selectedAmmoType = 'penetration';
             console.log('Switched to penetration ammo.');
         }
-    } else if (gameState === 'storeScreen' || gameState === 'restaurantScreen' || gameState === 'robberyScreen') {
+    } else if (currentGameState === gameState.STORE_SCREEN || currentGameState === gameState.RESTAURANT_SCREEN || currentGameState === gameState.ROBBERY_SCREEN) {
         if (e.code === 'KeyB') {
-            gameState = 'playing';
+            currentGameState = gameState.PLAYING;
         } else {
             handleEstablishmentInput(e.code);
         }
-    } else if (gameState === 'mainMenu') {
+    } else if (currentGameState === gameState.MAIN_MENU) {
         if (e.code === 'Enter') {
-            gameState = 'playing';
+            console.log("Enter key pressed in main menu");
+            currentGameState = gameState.PLAYING;
             enemies = initializeEnemiesForLevel(currentLevel);
+            console.log("Game started, enemies initialized:", enemies);
         }
-    } else if (gameState === 'paused') {
+    } else if (currentGameState === gameState.PAUSED) {
         if (e.code === 'Escape') {
             togglePause();
         } else if (e.code === 'KeyR') {
             resetGame();
-            gameState = 'playing';
+            currentGameState = gameState.PLAYING;
             console.log("Restarting the game");
         } else if (e.code === 'KeyM') {
             resetGame();
-            gameState = 'mainMenu';
+            currentGameState = gameState.MAIN_MENU;
             console.log("Returning to main menu");
+        }
+    } else if (currentGameState === gameState.ROBBERY_SUCCESS || currentGameState === gameState.ROBBERY_FAILURE) {
+        if (e.code === 'Enter') {
+            currentGameState = gameState.PLAYING;
         }
     }
 });
 
+// Add event listener for keyup events
 window.addEventListener('keyup', (e) => {
     keys[e.code] = false;
 });
 
 function handleEstablishmentInput(keyCode) {
-    if (gameState === 'storeScreen') {
+    if (currentGameState === gameState.STORE_SCREEN) {
         if (keyCode === 'Digit1') {
             purchaseItem('highDamageAmmo');
         } else if (keyCode === 'Digit2') {
             purchaseItem('penetrationAmmo');
+        } else if (keyCode === 'KeyB') {
+            currentGameState = gameState.PLAYING;
         }
-    } else if (gameState === 'restaurantScreen') {
+    } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
         if (keyCode === 'Digit1') {
             purchaseMeal();
+        } else if (keyCode === 'KeyB') {
+            currentGameState = gameState.PLAYING;
         }
-    } else if (gameState === 'robberyScreen') {
+    } else if (currentGameState === gameState.ROBBERY_SCREEN) {
         if (keyCode === 'Digit1') {
             robEstablishment();
+        } else if (keyCode === 'KeyB') {
+            currentGameState = gameState.PLAYING;
         }
     }
 }
@@ -388,10 +446,12 @@ function addCurrency(amount) {
 }
 
 function togglePause() {
-    if (gameState === 'playing') {
-        gameState = 'paused';
-    } else if (gameState === 'paused') {
-        gameState = 'playing';
+    if (currentGameState === gameState.PLAYING) {
+        currentGameState = gameState.PAUSED;
+        console.log("Game paused");
+    } else if (currentGameState === gameState.PAUSED) {
+        currentGameState = gameState.PLAYING;
+        console.log("Game resumed");
     }
 }
 
@@ -433,7 +493,7 @@ function updatePlayer() {
 
     // Prevent player from moving off the screen (left, right, top, bottom)
     const minY = 170;
-    const maxY = 445;
+    const maxY = 340;
     if (player.x < 0) player.x = 0;
     if (player.x + playerWidth > canvas.width) player.x = canvas.width - playerWidth;
     if (player.y < minY) player.y = minY;
@@ -814,18 +874,11 @@ function robEstablishment() {
     const successChance = Math.random();
     if (successChance > 0.5) {
         playerCurrency += 10;
-        robberyOutcome = 'Robbery successful! You gained 10 currency.';
+        currentGameState = gameState.ROBBERY_SUCCESS;
     } else {
         player.health -= 20;
-        robberyOutcome = 'Robbery failed! You lost 20 health.';
+        currentGameState = gameState.ROBBERY_FAILURE;
     }
-
-    // Set a timeout to display the outcome before switching back to 'playing'
-    setTimeout(() => {
-        gameState = 'playing';
-        robberyOutcome = ''; // Reset robbery outcome
-        robberyAttempted = false; // Reset the flag when the player returns to playing
-    }, 2000); // Display the outcome for 2 seconds
 }
 
 function initializeEnemiesForLevel(level) {
@@ -833,7 +886,6 @@ function initializeEnemiesForLevel(level) {
     const enemies = [];
 
     for (let i = 0; i < numberOfEnemies; i++) {
-        // Adjust enemy properties as needed
         enemies.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
@@ -962,16 +1014,10 @@ function drawLevelInfo() {
 }
 
 function drawMainMenu() {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = 'white';
-    ctx.font = '40px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Welcome to the Game', canvas.width / 2, canvas.height / 2 - 50);
-    ctx.fillStyle = 'yellow';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = '30px Arial';
-    ctx.fillText('Press Enter to Start', canvas.width / 2, canvas.height / 2 + 50);
+    ctx.fillStyle = 'black';
+    ctx.fillText("Main Menu - Press Enter to Start", 50, 100);
 }
 
 function drawPauseMenu() {
@@ -984,7 +1030,7 @@ function drawPauseMenu() {
     ctx.fillStyle = 'yellow';
     ctx.font = '30px Arial';
     ctx.fillText('Press Escape to Resume', canvas.width / 2, canvas.height / 2 + 50);
-    ctx.fillText('Press M to Main Menu', canvas.width / 2, canvas.height / 2 + 150);
+    ctx.fillText('Press M to Restart', canvas.width / 2, canvas.height / 2 + 150);
 }
 
 const STORE_POSITION = {
@@ -995,38 +1041,34 @@ const STORE_POSITION = {
 };
 
 function drawStoreScreen() {
-    ctx.clearRect(400, 0, canvas.width, canvas.height);
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText('Store - Press B to go back', 400, 30);
-
-    const items = Object.keys(storeItems);
-    items.forEach((item, index) => {
-        ctx.fillText(`${index + 1}. Buy ${item} (Price: ${storeItems[item].price})`, 400, 60 + index * 30);
-    });
-
-    ctx.fillText(`Current Currency: ${playerCurrency}`, 400, 60 + items.length * 30);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(storeImg, 0, 0, canvas.width, canvas.height);
 }
 
 function drawRestaurantScreen() {
-    ctx.clearRect(400, 0, canvas.width, canvas.height);
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText('Restaurant - Press B to go back', 400, 30);
-    ctx.fillText('1. Buy Meal (Price: 5, Heal: 20 Health)', 400, 60);
-    ctx.fillText(`Current Currency: ${playerCurrency}`, 400, 90);
-    ctx.fillText(`Current Health: ${player.health}/${player.maxHealth}`, 20, 120);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(restaurantScreenImg, 0, 0, canvas.width, canvas.height);
 }
 
 function drawRobberyScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '20px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText('Robbery - Press B to go back', 20, 30);
-    ctx.fillText('1. Attempt Robbery', 20, 60);
+    ctx.drawImage(robberyScreenImg, 0, 0, canvas.width, canvas.height);
+}
 
-    // Display the robbery outcome
-    ctx.fillText(robberyOutcome, 20, 120);
+function drawRobberySuccessScreen() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(robberySuccessImg, 0, 0, canvas.width, canvas.height);
+    setTimeout(() => {
+        currentGameState = gameState.PLAYING;
+    }, 2000); // Display the success message for 2 seconds
+}
+
+function drawRobberyFailureScreen() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(robberyFailureImg, 0, 0, canvas.width, canvas.height);
+    setTimeout(() => {
+        currentGameState = gameState.PLAYING;
+    }, 2000); // Display the failure message for 2 seconds
 }
 
 function drawStorePosition() {
@@ -1037,18 +1079,18 @@ function drawStorePosition() {
 function drawAmmoType() {
     ctx.font = '20px Arial';
     ctx.fillStyle = 'white';
-    ctx.fillText(`Ammo Type: ${selectedAmmoType}`, 90, 50); // Display the selected ammo type
+    ctx.fillText(`Ammo Type: ${selectedAmmoType}`, 480, 585); // Display the selected ammo type
 
     // Display ammo counts for each type
-    ctx.fillText(`Standard Ammo: ${ammoInventory.standard === Infinity ? '∞' : ammoInventory.standard}`, 90, 80);
-    ctx.fillText(`High Damage Ammo: ${ammoInventory.highDamage}`, 110, 110);
-    ctx.fillText(`Penetration Ammo: ${ammoInventory.penetration}`, 100, 140);
+    ctx.fillText(`Standard Ammo: ${ammoInventory.standard === Infinity ? '∞' : ammoInventory.standard}`, 480, 550);
+    ctx.fillText(`${ammoInventory.highDamage}`, 430, 515);
+    ctx.fillText(`${ammoInventory.penetration}`, 430, 585);
 }
 
 function drawCurrency() {
     ctx.font = '20px Arial';
     ctx.fillStyle = 'white';
-    ctx.fillText(`Currency: ${playerCurrency}`, 700, 60); // Display the currency at the top-left corner
+    ctx.fillText(`Wallet : ${playerCurrency} $`, 480, 510); // Display the currency at the top-left corner
 }
 
 function drawGameOverScreen() {
@@ -1095,30 +1137,31 @@ document.addEventListener('keydown', function (event) {
 function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (gameState === 'mainMenu') {
+    if (currentGameState === gameState.MAIN_MENU) {
         drawMainMenu();
-    } else if (gameState === 'playing') {
+    } else if (currentGameState === gameState.PLAYING) {
         drawBackground();
-
-        updateSprite(player); // Update player sprite
-        drawPlayer(); // Ensure drawPlayer uses player.frameX for animation
-
-        updateBullets(); // Update bullet positions and check for collisions
-        drawBullets(); // Draw bullets
-
-        updateEnemyAnimation(spriteSheet, timestamp); // Update enemy animation frame
-        updateEnemyPositions(enemies, player); // Update enemy positions to hunt the player
-
-        // Update and draw each enemy
+        
+        // Draw the HUD first
         enemies.forEach(enemy => {
             updateSprite(enemy); // Update enemy sprite
             drawEnemyFrame(ctx, spriteSheet, enemy, enemy.frameX, 0); // Draw enemy frame
             drawEnemyHealthBar(enemy); // Draw the enemy's health bar
         });
+        ctx.drawImage(hudImage, 0, 0);
+
+        // Draw other game elements
+        updateSprite(player); // Update player sprite
+        drawPlayer(); // Ensure drawPlayer uses player.frameX for animation
+        updateBullets(); // Update bullet positions and check for collisions
+        drawBullets(); // Draw bullets
+        updateEnemyAnimation(spriteSheet, timestamp); // Update enemy animation frame
+        updateEnemyPositions(enemies, player); // Update enemy positions to hunt the player
+
+        // Update and draw each enemy
 
         handlePlayerDamage(player, enemies, timestamp); // Check for collisions and handle damage
         checkGameOver(); // Check if the player's health is zero and handle game over
-
         drawPlayerHealth(); // Display player's health
         drawLevelInfo();
         updatePlayer();   // Handle player movement
@@ -1126,13 +1169,13 @@ function gameLoop(timestamp) {
         updateEnemies();  // Update enemies and check if all are cleared
         checkLevelProgression(); // Check if the player has progressed to the next level
         drawAmmoType(); // Display the current ammo type and counts
-        drawCurrency(); // Display the player's currency
+        drawCurrency(); // Display the player's currency over the HUD
 
         // Draw the shop entry point if all enemies are cleared
         if (enemiesCleared) {
             drawStorePosition();
         }
-    } else if (gameState === 'paused') {
+    } else if (currentGameState === gameState.PAUSED) {
         drawBackground();
         drawPlayer();
         drawBullets();
@@ -1140,20 +1183,22 @@ function gameLoop(timestamp) {
         drawPlayerHealth();
         drawLevelInfo();
         drawPauseMenu();
-    } else if (gameState === 'storeScreen') {
+    } else if (currentGameState === gameState.STORE_SCREEN) {
         drawStoreScreen();
-    } else if (gameState === 'restaurantScreen') {
+    } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
         drawRestaurantScreen();
-    } else if (gameState === 'robberyScreen') {
+    } else if (currentGameState === gameState.ROBBERY_SCREEN) {
         drawRobberyScreen();
-    } else if (gameState === 'gameOver') {
+    } else if (currentGameState === gameState.ROBBERY_SUCCESS) {
+        drawRobberySuccessScreen();
+    } else if (currentGameState === gameState.ROBBERY_FAILURE) {
+        drawRobberyFailureScreen();
+    } else if (currentGameState === gameState.GAME_OVER) {
         drawGameOverScreen(); // Display the game over screen
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-// Start the game loop only after the sprite sheet has loaded
-enemySpriteSheet.onload = () => {
-    requestAnimationFrame(gameLoop);
-};
+// Start the game loop
+requestAnimationFrame(gameLoop);
