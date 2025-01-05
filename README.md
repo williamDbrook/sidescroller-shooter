@@ -6,12 +6,12 @@ To play just open index.html in the src folder. <br />
 
 
 Credits: <br />
-	- Programing - Me <br />
+	- Programming - Me <br />
 	- Sprites - Me <br />
 	- Play testing - Peter Borssman <br />
 
 Software used: <br />
-	- Visual Studio Code - programing <br />
+	- Visual Studio Code - programming <br />
 	- Source Filmmaker - Sprites <br />
 	- GIMP - Sprites <br />
 	- Pixel It - Pixel art <br />
