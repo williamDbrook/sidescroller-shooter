@@ -1,27 +1,28 @@
 # javascript 2.5D shooter
 
-A side scrolling 2.5D shooter made in javascript.
+A side scrolling 2.5D shooter made in javascript. <br />
 
-To play just open index.html in the src folder.
+To play just open index.html in the src folder. <br />
 
 
-Credits:- Programing - Me
-	- Sprites - Me
-	- Play testing - Peter Borssman
+Credits: <br />
+	- Programing - Me <br />
+	- Sprites - Me <br />
+	- Play testing - Peter Borssman <br />
 
-Software used:
-	- Visual Studio Code - programing
-	- Source Filmmaker - Sprites
-	- GIMP - Sprites
-	- Pixel It - Pixel art
+Software used: <br />
+	- Visual Studio Code - programing <br />
+	- Source Filmmaker - Sprites <br />
+	- GIMP - Sprites <br />
+	- Pixel It - Pixel art <br />
 
-SFM stuff I used:
-	- base model: Medic TF2 by Valve
-	- First medic cosmetic: Quadwrangler by Deep_Friar, Swade (Hank Scorpio)
-	- Second medic cosmetic: Ward by Sparkwire
-	- Third medic cosmetic : German Gentleman by Silvi~♡
-	- Map : Dark City Street by bwobby!
-	- Weapon: SCARface by ChoEv 
-	- Enemy : TF2/Open Fortress: GFU Mercenary by ChoEv 
-	- Store and robbery screen: Persona 5: Central Street map by JonathanFS
-	- Food Items on the restaurant screen : Random Anime-styled Food Props by bobes ponja
+SFM stuff I used: <br />
+	- base model: Medic TF2 by Valve <br />
+	- First medic cosmetic: Quadwrangler by Deep_Friar, Swade (Hank Scorpio) <br />
+	- Second medic cosmetic: Ward by Sparkwire <br />
+	- Third medic cosmetic : German Gentleman by Silvi~♡ <br />
+	- Map : Dark City Street by bwobby! <br />
+	- Weapon: SCARface by ChoEv  <br />
+	- Enemy : TF2/Open Fortress: GFU Mercenary by ChoEv  <br />
+	- Store and robbery screen: Persona 5: Central Street map by JonathanFS <br />
+	- Food Items on the restaurant screen : Random Anime-styled Food Props by bobes ponja <br />
