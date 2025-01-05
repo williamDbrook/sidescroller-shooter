@@ -1,34 +1,34 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const enemySpriteSheet = new Image();
-enemySpriteSheet.src = 'enemy.png';
+enemySpriteSheet.src = './graphics/enemy.png';
 
 const backgroundImage = new Image();
-backgroundImage.src = 'bg.png';
+backgroundImage.src = './graphics/bg.png';
 
 const restaurantScreenImg = new Image();
-restaurantScreenImg.src = 'reastaurant_screen.png';
+restaurantScreenImg.src = './graphics/reastaurant_screen.png';
 
 const robberyScreenImg = new Image();
-robberyScreenImg.src = 'robberry_screen_wip.png';
+robberyScreenImg.src = './graphics/robberry_screen_wip.png';
 
 const robberySuccessImg = new Image();
-robberySuccessImg.src = 'robberry_screen_succes_wip.png';
+robberySuccessImg.src = './graphics/robberry_screen_succes_wip.png';
 
 const robberyFailureImg = new Image();
-robberyFailureImg.src = 'robbery_screen_fail_wip.png';
+robberyFailureImg.src = './graphics/robbery_screen_fail_wip.png';
 
 const storeImg = new Image();
-storeImg.src = 'store_screen.png';
+storeImg.src = './graphics/store_screen.png';
 
 const hudImage = new Image();
-hudImage.src = 'hud.png';
+hudImage.src = './graphics/hud.png';
 hudImage.onload = () => {
     console.log('HUD image loaded');
 };
 
 const arrowImage = new Image();
-arrowImage.src = 'mark.png'; 
+arrowImage.src = './graphics/mark.png'; 
 arrowImage.onload = () => {
     console.log('Arrow image loaded');
 };
@@ -81,7 +81,7 @@ const player = {
     lastDamageTime: 0,
     damageInterval: 1000,
 };
-player.sprite.src = 'player.png';
+player.sprite.src = './graphics/player.png';
 
 const bullets = [];
 const bulletSpeed = 10;
