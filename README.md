@@ -15,6 +15,7 @@ Software used: <br />
 	- Source Filmmaker - Sprites <br />
 	- GIMP - Sprites <br />
 	- Pixel It - Pixel art <br />
+	- Pixel Studio - Sprite <br />
 
 SFM stuff I used: <br />
 	- base model: Medic TF2 by Valve <br />
