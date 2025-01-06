@@ -27,10 +27,28 @@ hudImage.onload = () => {
     console.log('HUD image loaded');
 };
 
+const mainMenuImage = new Image();
+mainMenuImage.src = './graphics/mainmenu.png';
+mainMenuImage.onload = () => {
+    console.log('Main menu loaded');
+};
+mainMenuImage.onerror = () => {
+    console.error('Error loading main menu image');
+}
+
 const arrowImage = new Image();
 arrowImage.src = './graphics/mark.png'; 
 arrowImage.onload = () => {
     console.log('Arrow image loaded');
+};
+
+const controlsImage = new Image();
+controlsImage.src = './graphics/how.png';
+controlsImage.onload = () => {
+    console.log('Controls loaded');
+};
+controlsImage.onerror = () => {
+    console.log('Error loading controls');
 };
 
 let backgroundX = 0;
@@ -45,7 +63,8 @@ const gameState = {
     ROBBERY_SCREEN: 'robberyScreen',
     ROBBERY_SUCCESS: 'robberySuccess',
     ROBBERY_FAILURE: 'robberyFailure',
-    GAME_OVER: 'gameOver'
+    GAME_OVER: 'gameOver',
+    CONTROLS: 'controls'
 };
 
 const meals = {
@@ -323,7 +342,22 @@ window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
     console.log(`Key pressed: ${e.code}, Current game state: ${currentGameState}`);
 
-    if (currentGameState === gameState.PLAYING) {
+    if (currentGameState === gameState.MAIN_MENU) {
+        if (e.code === 'Enter') {
+            console.log("Enter key pressed in main menu");
+            currentGameState = gameState.PLAYING;
+            enemies = initializeEnemiesForLevel(currentLevel);
+            console.log("Game started, enemies initialized:", enemies);
+        } else if (e.code === 'KeyQ') {
+            console.log("Q key pressed in main menu");
+            currentGameState = gameState.CONTROLS;
+        }
+    } else if (currentGameState === gameState.CONTROLS) {
+        if (e.code === 'Escape') {
+            console.log("Escape key pressed in controls menu");
+            currentGameState = gameState.MAIN_MENU;
+        }
+    } else if (currentGameState === gameState.PLAYING) {
         if (e.code === 'Space') {
             shootBullet();
         }
@@ -361,15 +395,8 @@ window.addEventListener('keydown', (e) => {
             purchaseMeal(meals.BEEF_SOUP);
         } else if (e.code === 'Digit3') {
             purchaseMeal(meals.FRIED_PIRANHA);
-        } else if (e.code === 'KeyB') {
+        } else if (e.code === 'Escape') {
             currentGameState = gameState.PLAYING;
-        }
-    } else if (currentGameState === gameState.MAIN_MENU) {
-        if (e.code === 'Enter') {
-            console.log("Enter key pressed in main menu");
-            currentGameState = gameState.PLAYING;
-            enemies = initializeEnemiesForLevel(currentLevel);
-            console.log("Game started, enemies initialized:", enemies);
         }
     } else if (currentGameState === gameState.PAUSED) {
         if (e.code === 'Escape') {
@@ -392,6 +419,7 @@ window.addEventListener('keydown', (e) => {
 
 window.addEventListener('keyup', (e) => {
     keys[e.code] = false;
+    console.log(`Key released: ${e.code}, Current game state: ${currentGameState}`);
 });
 
 function handleEstablishmentInput(keyCode) {
@@ -776,7 +804,7 @@ function moveTowardPlayer(enemy) {
     enemy.y += enemy.dy;
 
     if (enemy.y < 170) {
-        enemy.y = 170;
+        enemy.y = 170;;
     }
 }
 
@@ -1025,10 +1053,9 @@ function drawLevelInfo() {
 }
 
 function drawMainMenu() {
+    console.log("Drawing main menu");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = '30px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText("Main Menu - Press Enter to Start", 50, 100);
+    ctx.drawImage(mainMenuImage, 0, 0, canvas.width, canvas.height);
 }
 
 function drawPauseMenu() {
@@ -1139,6 +1166,12 @@ function drawEnemyHealthBar(enemy) {
     ctx.strokeRect(barX, barY, barWidth, barHeight);
 }
 
+function drawControlsScreen() {
+    console.log("Drawing controls screen");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(controlsImage, 0, 0, canvas.width, canvas.height);
+}
+
 document.addEventListener('keydown', function (event) {
     if (event.key === 'r' || event.key === 'R') {
         restartGame();
@@ -1150,6 +1183,8 @@ function gameLoop(timestamp) {
 
     if (currentGameState === gameState.MAIN_MENU) {
         drawMainMenu();
+    } else if (currentGameState === gameState.CONTROLS) {
+        drawControlsScreen();
     } else if (currentGameState === gameState.PLAYING) {
         drawBackground();
         
