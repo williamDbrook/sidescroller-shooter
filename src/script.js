@@ -1,58 +1,177 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const enemySpriteSheet = new Image();
-enemySpriteSheet.src = './graphics/enemy.png';
 
+// Load enemy sprite sheet
+const enemySpriteSheet = new Image();
+enemySpriteSheet.src = './graphics/enemy.png'; // Replace with the actual path to your sprite sheet
+enemySpriteSheet.onload = () => {
+    console.log('Enemy sprite sheet loaded');
+};
+enemySpriteSheet.onerror = () => {
+    console.error('Error loading enemy sprite sheet');
+};
+
+// Load background image
 const backgroundImage = new Image();
 backgroundImage.src = './graphics/bg.png';
+backgroundImage.onload = () => {
+    console.log('Background image loaded');
+};
+backgroundImage.onerror = () => {
+    console.error('Error loading background image');
+};
 
+// Load restaurant screen image
 const restaurantScreenImg = new Image();
 restaurantScreenImg.src = './graphics/reastaurant_screen.png';
+restaurantScreenImg.onload = () => {
+    console.log('Restaurant screen image loaded');
+};
+restaurantScreenImg.onerror = () => {
+    console.error('Error loading restaurant screen image');
+};
 
+// Load robbery screen image
 const robberyScreenImg = new Image();
 robberyScreenImg.src = './graphics/robberry_screen_wip.png';
+robberyScreenImg.onload = () => {
+    console.log('Robbery screen image loaded');
+};
+robberyScreenImg.onerror = () => {
+    console.error('Error loading robbery screen image');
+};
 
+// Load robbery success screen image
 const robberySuccessImg = new Image();
 robberySuccessImg.src = './graphics/robberry_screen_succes_wip.png';
+robberySuccessImg.onload = () => {
+    console.log('Robbery success image loaded');
+};
+robberySuccessImg.onerror = () => {
+    console.error('Error loading robbery success image');
+};
 
+// Load robbery failure screen image
 const robberyFailureImg = new Image();
 robberyFailureImg.src = './graphics/robbery_screen_fail_wip.png';
+robberyFailureImg.onload = () => {
+    console.log('Robbery failure image loaded');
+};
+robberyFailureImg.onerror = () => {
+    console.error('Error loading robbery failure image');
+};
 
+// Load store screen image
 const storeImg = new Image();
 storeImg.src = './graphics/store_screen.png';
+storeImg.onload = () => {
+    console.log('Store screen image loaded');
+};
+storeImg.onerror = () => {
+    console.error('Error loading store screen image');
+};
 
+// Load HUD image
 const hudImage = new Image();
 hudImage.src = './graphics/hud.png';
 hudImage.onload = () => {
     console.log('HUD image loaded');
 };
+hudImage.onerror = () => {
+    console.error('Error loading HUD image');
+};
 
+// Load main menu image
 const mainMenuImage = new Image();
 mainMenuImage.src = './graphics/mainmenu.png';
 mainMenuImage.onload = () => {
-    console.log('Main menu loaded');
+    console.log('Main menu image loaded');
 };
 mainMenuImage.onerror = () => {
     console.error('Error loading main menu image');
-}
+};
 
+// Load arrow image
 const arrowImage = new Image();
-arrowImage.src = './graphics/mark.png'; 
+arrowImage.src = './graphics/mark.png';
 arrowImage.onload = () => {
     console.log('Arrow image loaded');
 };
+arrowImage.onerror = () => {
+    console.error('Error loading arrow image');
+};
 
+// Load controls image
 const controlsImage = new Image();
 controlsImage.src = './graphics/how.png';
 controlsImage.onload = () => {
-    console.log('Controls loaded');
+    console.log('Controls image loaded');
 };
 controlsImage.onerror = () => {
-    console.log('Error loading controls');
+    console.error('Error loading controls image');
 };
 
+// Load player sprite
+const playerSprite = new Image();
+playerSprite.src = './graphics/player.png';
+playerSprite.onload = () => {
+    console.log('Player sprite loaded');
+};
+playerSprite.onerror = () => {
+    console.error('Error loading player sprite');
+};
+
+const images = {};
+const imageSources = {
+    enemy: './graphics/enemy.png',
+    background: './graphics/bg.png',
+    restaurantImage: './graphics/reastaurant_screen.png',
+    robberyScreen: './graphics/robberry_screen_wip.png',
+    robberySuccess: './graphics/robberry_screen_succes_wip.png',
+    robberyFailure: './graphics/robbery_screen_fail_wip.png',
+    store: './graphics/store_screen.png',
+    hud: './graphics/hud.png',
+    mainMenuImage: './graphics/mainmenu.png',
+    arrow: './graphics/mark.png',
+    controls: './graphics/how.png',
+    player: './graphics/player.png'
+};
+
+let imagesLoaded = 0;
+const totalImages = Object.keys(imageSources).length;
+
+for (const [name, src] of Object.entries(imageSources)) {
+    images[name] = new Image();
+    images[name].src = src;
+    images[name].onload = () => {
+        imagesLoaded++;
+        console.log(`${name} image loaded`);
+    };
+    images[name].onerror = () => {
+        console.error(`Error loading ${name} image`);
+    };
+}
+
+function allImagesLoaded() {
+    return imagesLoaded === totalImages;
+}
+
+function initializeGame() {
+    if (!allImagesLoaded()) {
+        console.log('Waiting for images to load...');
+        setTimeout(initializeGame, 100); // Check again after 100ms
+        return;
+    }
+    console.log('All images loaded. Starting game...');
+    // Initialize game and start the game loop
+    enemies = initializeEnemiesForLevel(currentLevel);
+    requestAnimationFrame(gameLoop);
+}
+
+// Preload images and initialize the game
+initializeGame();
+
 let backgroundX = 0;
-let progressionChecked = false;
 
 const gameState = {
     MAIN_MENU: 'mainMenu',
@@ -74,16 +193,21 @@ const meals = {
 };
 
 let currentGameState = gameState.MAIN_MENU;
+let playerCurrency = 0; 
+let currentLevel = 1;
+let enemiesCleared = false;
+let progressionChecked = false;
+let selectedEstablishment = null;
 
 const player = {
     x: 100,
     y: canvas.height / 2 - 25,
     width: 100,
     height: 100,
-    speed: 5,
+    speed: 3,
     dx: 0,
     dy: 0,
-    sprite: new Image(),
+    sprite: playerSprite, // Use the loaded player sprite
     frameX: 0,
     frameY: 0,
     frameWidth: 231,
@@ -100,12 +224,9 @@ const player = {
     lastDamageTime: 0,
     damageInterval: 1000,
 };
-player.sprite.src = './graphics/player.png';
 
 const bullets = [];
 const bulletSpeed = 10;
-let shootCooldown = 200; 
-let lastShootTime = 0;
 
 const ESTABLISHMENTS = {
     STORE: 'store',
@@ -137,18 +258,12 @@ const storeItems = {
 let robberyOutcome = '';
 let robberyAttempted = false;
 
-let playerCurrency = 0; 
-
-let currentLevel = 1;
-let enemiesCleared = false;
-
 const enemyAttackRange = 50;
 const enemyAttackCooldown = 1000;
 
+const MIN_SAFE_DISTANCE = 100;
 
 let isMovingToNextLevel = false;
-
-const MIN_SAFE_DISTANCE = 100; 
 
 const keys = {};
 
@@ -202,35 +317,24 @@ function selectRandomEstablishment() {
 }
 
 function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
+    const scaleFactor = calculateScalingFactor(enemy.y);
+    const scaledWidth = enemy.frameWidth * scaleFactor;
+    const scaledHeight = enemy.frameHeight * scaleFactor;
+
     if (enemy.facingLeft) {
         ctx.save();
-
         ctx.scale(-1, 1);
-
         ctx.drawImage(
-            enemySpriteSheet,
-            frameX * spriteSheet.frameWidth, 
-            frameY * spriteSheet.frameHeight, 
-            spriteSheet.frameWidth, 
-            spriteSheet.frameHeight, 
-            -enemy.x - spriteSheet.frameWidth, 
-            enemy.y, 
-            spriteSheet.frameWidth, 
-            spriteSheet.frameHeight 
+            spriteSheet,
+            frameX * enemy.frameWidth, frameY * enemy.frameHeight, enemy.frameWidth, enemy.frameHeight,
+            -enemy.x - scaledWidth, enemy.y, scaledWidth, scaledHeight
         );
-
         ctx.restore();
     } else {
         ctx.drawImage(
-            enemySpriteSheet,
-            frameX * spriteSheet.frameWidth,
-            frameY * spriteSheet.frameHeight, 
-            spriteSheet.frameWidth,
-            spriteSheet.frameHeight, 
-            enemy.x, 
-            enemy.y, 
-            spriteSheet.frameWidth, 
-            spriteSheet.frameHeight 
+            spriteSheet,
+            frameX * enemy.frameWidth, frameY * enemy.frameHeight, enemy.frameWidth, enemy.frameHeight,
+            enemy.x, enemy.y, scaledWidth, scaledHeight
         );
     }
 }
@@ -248,34 +352,17 @@ function getNumberOfEnemies(level) {
 }
 
 function updateEnemyAnimation(spriteSheet, timestamp) {
-    if (timestamp - spriteSheet.lastUpdateTime > spriteSheet.animationSpeed) {
-        spriteSheet.currentFrame = (spriteSheet.currentFrame + 1) % spriteSheet.frameCount;
-        spriteSheet.lastUpdateTime = timestamp;
-    }
+    enemies.forEach(enemy => {
+        if (timestamp - enemy.animationTimer > enemy.animationSpeed) {
+            enemy.frameX = (enemy.frameX + 1) % enemy.totalFrames;
+            enemy.animationTimer = timestamp;
+        }
+    });
 }
 
 function updateEnemyPositions(enemies, player) {
     enemies.forEach(enemy => {
-        const directionX = player.x - enemy.x;
-        const directionY = player.y - enemy.y;
-        const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
-        
-        if (magnitude > 0) {
-            enemy.dx = (directionX / magnitude) * enemy.speed;
-            enemy.dy = (directionY / magnitude) * enemy.speed;
-        } else {
-            enemy.dx = 0;
-            enemy.dy = 0;
-        }
-
-        enemy.x += enemy.dx;
-        enemy.y += enemy.dy;
-
-        if (enemy.dx > 0) {
-            enemy.facingLeft = false; 
-        } else if (enemy.dx < 0) {
-            enemy.facingLeft = true;  
-        }
+        moveTowardPlayer(enemy);
 
         if (isNaN(enemy.x) || isNaN(enemy.y)) {
             console.error('Invalid position values:', enemy.x, enemy.y);
@@ -283,14 +370,8 @@ function updateEnemyPositions(enemies, player) {
     });
 }
 
-let selectedEstablishment = null;
-
 function checkLevelProgression() {
-    // console.log("checkLevelProgression called");
-    // console.log(`Enemies Length: ${enemies.length}, Enemies Cleared: ${enemiesCleared}, Progression Checked: ${progressionChecked}`);
-    
     if (enemies.length === 0 && enemiesCleared && !progressionChecked) {
-        // console.log("Enemies cleared condition met");
         playerCurrency += 100; 
         console.log(`Level cleared! Player currency: ${playerCurrency}`);
 
@@ -317,7 +398,6 @@ function checkLevelProgression() {
         enemiesCleared = false;
         progressionChecked = false; 
         selectedEstablishment = null; 
-        // console.log("Progressed to the next level. Establishment and progression reset.");
     }
 }
 
@@ -636,8 +716,6 @@ function detectPlayerEnemyCollision(player, enemy) {
            player.y + player.height > enemy.y;
 }
 
-
-
 function resolvePlayerEnemyCollision(player, enemy) {
     const overlapX = (player.width + enemy.width) / 2 - Math.abs(player.x + player.width / 2 - (enemy.x + enemy.width / 2));
     const overlapY = (player.height + enemy.height) / 2 - Math.abs(player.y + player.height / 2 - (enemy.y + enemy.height / 2));
@@ -689,10 +767,13 @@ function resolveCollision(enemy1, enemy2) {
 
 function handlePlayerDamage(player, enemies, timestamp) {
     enemies.forEach(enemy => {
-        if (detectCollision(player, enemy)) {
+        const horizontallyAligned = Math.abs(player.y - enemy.y) < enemy.height / 2;
+        const distanceX = Math.abs(player.x - enemy.x);
+
+        if (horizontallyAligned && distanceX <= enemy.width / 2) {
             if (timestamp - player.lastDamageTime > player.damageInterval) {
                 player.health -= 10;
-                player.lastDamageTime = timestamp; 
+                player.lastDamageTime = timestamp;
                 console.log(`Player hit! Health: ${player.health}`);
             }
         }
@@ -732,6 +813,16 @@ function updateBullets() {
             }
         });
     });
+}
+
+function calculateScalingFactor(y) {
+    const minScale = 0.5; // Minimum scale factor (for enemies far away)
+    const maxScale = 2; // Maximum scale factor (for enemies close by)
+    const screenHeight = canvas.height;
+    
+    // Calculate the scaling factor based on the Y-coordinate
+    const scaleFactor = minScale + (maxScale - minScale) * (y / screenHeight);
+    return scaleFactor;
 }
 
 function updateEnemies() {
@@ -796,16 +887,32 @@ function updateEnemies() {
 }
 
 function moveTowardPlayer(enemy) {
-    const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
-    enemy.dx = Math.cos(angle) * enemy.speed;
-    enemy.dy = Math.sin(angle) * enemy.speed;
+    const directionX = player.x - enemy.x;
+    const directionY = player.y - enemy.y;
+    const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
+
+    if (magnitude > 0) {
+        enemy.dx = (directionX / magnitude) * enemy.speed;
+        enemy.dy = (directionY / magnitude) * enemy.speed;
+    } else {
+        enemy.dx = 0;
+        enemy.dy = 0;
+    }
 
     enemy.x += enemy.dx;
     enemy.y += enemy.dy;
 
-    if (enemy.y < 170) {
-        enemy.y = 170;;
+    if (enemy.dx > 0) {
+        enemy.facingLeft = false;
+    } else if (enemy.dx < 0) {
+        enemy.facingLeft = true;
     }
+
+    // Ensure the enemy stays within the bounds of the canvas
+    if (enemy.x < 0) enemy.x = 0;
+    if (enemy.x + enemy.width > canvas.width) enemy.x = canvas.width - enemy.width;
+    if (enemy.y < 170) enemy.y = 170;
+    if (enemy.y + enemy.height > canvas.height) enemy.y = canvas.height - enemy.height;
 }
 
 function distanceBetween(x1, y1, x2, y2) {
@@ -823,7 +930,7 @@ function resetGame() {
     enemies = initializeEnemiesForLevel(currentLevel);
     selectedEstablishment = null;
     robberyAttempted = false;
-    gameState = 'playing'; 
+    currentGameState = gameState.PLAYING;
 }
 
 function isPlayerAtStorePosition() {
@@ -866,23 +973,27 @@ function addEnemies(numberOfEnemies) {
         do {
             enemyY = Math.random() * canvas.height;
         } while (enemyY < 170);
+
         enemies.push({
             x: enemyX,
             y: enemyY,
             dx: 0,
             dy: 0,
             animationTimer: 0,
-            animationSpeed: 10,
+            animationSpeed: 25,
             frameX: 0,
-            totalFrames: 4,
+            totalFrames: 10, // Number of frames in the sprite sheet
             idleFrame: 0,
-            speed: 2,
+            speed: 1.5,
             facingLeft: false,
-            width: 64,
-            height: 64,
+            width: 50,
+            height: 50,
+            frameWidth: 180, // Frame width from the sprite sheet
+            frameHeight: 150, // Frame height from the sprite sheet
             health: 50,
             maxHealth: 50,
-            lastAttackTime: 0
+            lastAttackTime: 0,
+            image: enemySpriteSheet // Use the sprite sheet image
         });
     }
 }
@@ -927,6 +1038,15 @@ function initializeEnemiesForLevel(level) {
     const enemies = [];
 
     for (let i = 0; i < numberOfEnemies; i++) {
+        const enemyImage = new Image();
+        enemyImage.src = './graphics/enemy.png'; // Replace with the actual path to your enemy image
+        enemyImage.onload = () => {
+            console.log('Enemy image loaded');
+        };
+        enemyImage.onerror = () => {
+            console.error('Error loading enemy image');
+        };
+
         enemies.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
@@ -942,7 +1062,8 @@ function initializeEnemiesForLevel(level) {
             width: 64,
             height: 64,
             health: 50,
-            maxHealth: 50
+            maxHealth: 50,
+            image: enemyImage // Assign the loaded image to the enemy
         });
     }
 
@@ -971,11 +1092,11 @@ function updateSprite(sprite) {
 
 function restartGame() {
     player.health = 100; 
-    gameState = 'playing';
+    currentGameState = gameState.PLAYING;
 }
 
 function drawBullets() {
-    ctx.fillStyle = 'red';
+    ctx.fillStyle = 'yellow';
     bullets.forEach(bullet => {
         ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
     });
@@ -997,7 +1118,7 @@ function drawBackground() {
 function drawPlayer() {
     ctx.save();
 
-    
+    // Calculate the scale factor based on player's Y-coordinate
     const maxScale = 2;     
     const minScale = 0.5;  
     const scale = minScale + ((maxScale - minScale) * (player.y / canvas.height));
@@ -1022,16 +1143,18 @@ function drawPlayer() {
     ctx.restore();
 }
 
-function drawEnemies() {
-    enemies.forEach(enemy => {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+function drawEnemy(enemy) {
+    const scaleFactor = calculateScalingFactor(enemy.y);
+    const scaledWidth = enemy.width * scaleFactor;
+    const scaledHeight = enemy.height * scaleFactor;
 
-        ctx.fillStyle = 'black';
-        ctx.fillRect(enemy.x, enemy.y - 10, enemy.width, 5);
-        ctx.fillStyle = 'green';
-        ctx.fillRect(enemy.x, enemy.y - 10, (enemy.health / 3) * enemy.width, 5);
-    });
+    ctx.drawImage(
+        enemy.image,  // Assuming enemy.image is the enemy's image
+        enemy.x - scaledWidth / 2,  // Center the enemy horizontally
+        enemy.y - scaledHeight / 2,  // Center the enemy vertically
+        scaledWidth,
+        scaledHeight
+    );
 }
 
 function drawPlayerHealth() {
@@ -1178,6 +1301,35 @@ document.addEventListener('keydown', function (event) {
     }
 });
 
+function calculateScalingFactor(y) {
+    const minScale = 0.5; // Minimum scale factor (for enemies far away)
+    const maxScale = 1.5; // Maximum scale factor (for enemies close by) - Adjust this value to limit scaling
+    const screenHeight = canvas.height;
+
+    // Calculate the scaling factor based on the Y-coordinate
+    const scaleFactor = minScale + (maxScale - minScale) * (y / screenHeight);
+    return scaleFactor;
+}
+
+function drawScaledEnemy(enemy) {
+    if (!enemy.image || !enemy.image.complete) {
+        console.error('Enemy image is not loaded');
+        return;
+    }
+
+    const scaleFactor = calculateScalingFactor(enemy.y);
+    const scaledWidth = enemy.width * scaleFactor;
+    const scaledHeight = enemy.height * scaleFactor;
+
+    ctx.drawImage(
+        enemy.image,  // Ensure this is a valid image
+        enemy.x - scaledWidth / 2,  // Center the enemy horizontally
+        enemy.y - scaledHeight / 2,  // Center the enemy vertically
+        scaledWidth,
+        scaledHeight
+    );
+}
+
 function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1187,30 +1339,31 @@ function gameLoop(timestamp) {
         drawControlsScreen();
     } else if (currentGameState === gameState.PLAYING) {
         drawBackground();
-        
+
+        // Update and draw each enemy with scaling
+        updateEnemyAnimation(spriteSheet, timestamp);
         enemies.forEach(enemy => {
-            updateSprite(enemy); 
-            drawEnemyFrame(ctx, spriteSheet, enemy, enemy.frameX, 0); // Draw enemy frame
-            drawEnemyHealthBar(enemy); 
+            drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0); // Draw the enemy frame
+            drawEnemyHealthBar(enemy); // Draw the enemy's health bar
         });
-        ctx.drawImage(hudImage, 0, 0);
 
-        updateSprite(player);
-        drawPlayer();
-        updateBullets(); 
-        drawBullets(); 
-        updateEnemyAnimation(spriteSheet, timestamp); 
-        updateEnemyPositions(enemies, player);
+        ctx.drawImage(hudImage, 0, 0); // Use preloaded HUD image
 
-        handlePlayerDamage(player, enemies, timestamp);
+        updatePlayer(); // Update player without enemy collision checks
+        handlePlayerDamage(player, enemies, timestamp); // Handle player damage
+
+        updateBullets();
+        drawBullets();
+        updateEnemyPositions(enemies, player); // Update enemy positions
+
+        drawPlayer(); // Draw the player
         checkGameOver();
         drawPlayerHealth();
         drawLevelInfo();
-        updatePlayer(); 
         handleShooting();
-        updateEnemies(); 
+        updateEnemies();
         checkLevelProgression();
-        drawAmmoType(); 
+        drawAmmoType();
         drawCurrency();
 
         updateArrowPosition();
@@ -1222,7 +1375,7 @@ function gameLoop(timestamp) {
         drawBackground();
         drawPlayer();
         drawBullets();
-        drawEnemies();
+        enemies.forEach(enemy => drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0)); // Draw scaled enemies in paused state
         drawPlayerHealth();
         drawLevelInfo();
         drawPauseMenu();
@@ -1237,11 +1390,11 @@ function gameLoop(timestamp) {
     } else if (currentGameState === gameState.ROBBERY_FAILURE) {
         drawRobberyFailureScreen();
     } else if (currentGameState === gameState.GAME_OVER) {
-        drawGameOverScreen(); 
+        drawGameOverScreen();
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-
+// Start the game loop
 requestAnimationFrame(gameLoop);
