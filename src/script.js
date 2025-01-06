@@ -1364,14 +1364,34 @@ function gameLoop(timestamp) {
         drawPauseMenu();
     } else if (currentGameState === gameState.STORE_SCREEN) {
         drawStoreScreen();
+        ctx.drawImage(hudImage, 0, 0);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
         drawRestaurantScreen();
+        ctx.drawImage(hudImage, 0, 0);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SCREEN) {
         drawRobberyScreen();
+        ctx.drawImage(hudImage, 0, 0);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SUCCESS) {
         drawRobberySuccessScreen();
+        ctx.drawImage(hudImage, 0, 0);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_FAILURE) {
         drawRobberyFailureScreen();
+        ctx.drawImage(hudImage, 0, 0);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.GAME_OVER) {
         drawGameOverScreen();
     }
@@ -1387,5 +1407,4 @@ document.addEventListener('keyup', (event) => {
     keys[event.key] = false;
 });
 
-// Start the game loop
 requestAnimationFrame(gameLoop);
