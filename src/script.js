@@ -1,6 +1,18 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const shootingSoundSrc = './Sounds/shoot_sound.mp3'; // Replace with the actual path to your sound file
+
+// Function to preload the sound
+function preloadSound(src) {
+    const sound = new Audio(src);
+    sound.load();
+    return sound;
+}
+
+// Preload the sound
+preloadSound(shootingSoundSrc);
+
 const enemySpriteSheet = new Image();
 enemySpriteSheet.src = './graphics/enemy.png'; // Replace with the actual path to your sprite sheet
 enemySpriteSheet.onload = () => {
@@ -192,6 +204,7 @@ const player = {
     y: canvas.height / 2 - 25,
     width: 100,
     height: 100,
+    scale: 1.5, // Example scale factor
     speed: 3,
     dx: 0,
     dy: 0,
@@ -249,8 +262,11 @@ const storeItems = {
     penetrationAmmo: { price: 5, effect: () => { ammoInventory.penetration += 5; } },
 };
 
-const enemyAttackRange = 50;
+const enemyAttackRange = 150;
 const enemyAttackCooldown = 1000;
+
+const enemySpawnMinY = 200;
+const enemySpawnMaxY = 440;
 
 const MIN_SAFE_DISTANCE = 100;
 
@@ -268,14 +284,14 @@ const spriteSheet = {
 let enemies = [];
 
 const MARK_POSITION = {
-    x: 381, 
+    x: 825, 
     y: 60, 
     width: 40,
     height: 50
 };
 
 const STORE_POSITION = {
-    x: 356, 
+    x: 835, 
     y: 134, 
     width: 90,
     height: 100
@@ -283,7 +299,7 @@ const STORE_POSITION = {
 
 let arrowY = MARK_POSITION.y;
 let arrowDirection = 1;
-const ARROW_SPEED = 1;
+const ARROW_SPEED = 0.75;
 const ARROW_RANGE = 10;
 
 function updateArrowPosition() {
@@ -622,8 +638,8 @@ function updatePlayer() {
     player.x += player.dx;
     player.y += player.dy;
 
-    const minY = 170;
-    const maxY = 340;
+    const minY = 200;
+    const maxY = 440;
     if (player.x < 0) player.x = 0;
     if (player.x + playerWidth > canvas.width) player.x = canvas.width - playerWidth;
     if (player.y < minY) player.y = minY;
@@ -650,9 +666,18 @@ function shootBullet() {
     if (currentTime - player.lastShootTime >= player.shootCooldown) {
         if (ammoInventory[selectedAmmoType] > 0 || selectedAmmoType === 'standard') {
             const ammo = ammoTypes[selectedAmmoType];
+
+            // Calculate scaled dimensions
+            const scaledWidth = player.width * player.scale;
+            const scaledHeight = player.height * player.scale;
+
+            // Adjust bullet starting coordinates based on scaled dimensions
+            const bulletStartX = player.facingRight ? player.x + (player.width * 0.8) : player.x - (scaledWidth - player.width) / 2;
+            const bulletStartY = player.y + scaledHeight / 4.365; // Adjust this value based on your sprite's design
+
             bullets.push({
-                x: player.facingRight ? player.x + player.width : player.x,
-                y: player.y + player.height / 2,
+                x: bulletStartX,
+                y: bulletStartY,
                 width: 10,
                 height: 5,
                 speed: player.facingRight ? 10 : -10, 
@@ -661,6 +686,10 @@ function shootBullet() {
                 hitEnemies: []
             });
             player.lastShootTime = currentTime;
+
+            // Play the shooting sound effect
+            const shootingSoundInstance = new Audio(shootingSoundSrc);
+            shootingSoundInstance.play();
 
             if (selectedAmmoType !== 'standard') {
                 ammoInventory[selectedAmmoType]--;
@@ -1029,6 +1058,10 @@ function initializeEnemiesForLevel(level) {
     const numberOfEnemies = getNumberOfEnemies(level);
     const enemies = [];
 
+    // Define the vertical range for enemy spawning
+    const enemySpawnMinY = 200;
+    const enemySpawnMaxY = 440;
+
     for (let i = 0; i < numberOfEnemies; i++) {
         const enemyImage = new Image();
         enemyImage.src = './graphics/enemy.png'; // Replace with the actual path to your enemy image
@@ -1039,9 +1072,13 @@ function initializeEnemiesForLevel(level) {
             console.error('Error loading enemy image');
         };
 
+        // Ensure enemy spawns within the specified vertical range
+        const enemyX = Math.random() * canvas.width;
+        const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
+
         enemies.push({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
+            x: enemyX,
+            y: enemyY,
             dx: 0,
             dy: 0,
             animationTimer: 0,
@@ -1229,17 +1266,17 @@ function drawMarkPosition() {
 function drawAmmoType() {
     ctx.font = '20px Arial';
     ctx.fillStyle = 'white';
-    ctx.fillText(`Ammo Type: ${selectedAmmoType}`, 480, 585);
+    ctx.fillText(`Ammo Type: ${selectedAmmoType}`, 480, 665);
 
-    ctx.fillText(`Standard Ammo: ${ammoInventory.standard === Infinity ? '∞' : ammoInventory.standard}`, 480, 550);
-    ctx.fillText(`${ammoInventory.highDamage}`, 430, 515);
-    ctx.fillText(`${ammoInventory.penetration}`, 430, 585);
+    ctx.fillText(`Standard Ammo: ${ammoInventory.standard === Infinity ? '∞' : ammoInventory.standard}`, 480, 700);
+    ctx.fillText(`${ammoInventory.highDamage}`, 430, 630);
+    ctx.fillText(`${ammoInventory.penetration}`, 430, 700);
 }
 
 function drawCurrency() {
     ctx.font = '20px Arial';
     ctx.fillStyle = 'white';
-    ctx.fillText(`Wallet : ${playerCurrency} $`, 480, 510);
+    ctx.fillText(`Wallet : ${playerCurrency} $`, 480, 630);
 }
 
 function drawGameOverScreen() {
@@ -1330,7 +1367,7 @@ function gameLoop(timestamp) {
             drawEnemyHealthBar(enemy); // Draw the enemy's health bar
         });
 
-        ctx.drawImage(hudImage, 0, 0); // Use preloaded HUD image
+        ctx.drawImage(hudImage, 0, 115); // Use preloaded HUD image
 
         updatePlayer(); // Update player without enemy collision checks
         handlePlayerDamage(player, enemies, timestamp); // Handle player damage
