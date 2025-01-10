@@ -1,20 +1,18 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const shootingSoundSrc = './Sounds/shoot_sound.mp3'; // Replace with the actual path to your sound file
+const shootingSoundSrc = './Sounds/shoot_sound.mp3';
 
-// Function to preload the sound
 function preloadSound(src) {
     const sound = new Audio(src);
     sound.load();
     return sound;
 }
 
-// Preload the sound
 preloadSound(shootingSoundSrc);
 
 const enemySpriteSheet = new Image();
-enemySpriteSheet.src = './graphics/enemy.png'; // Replace with the actual path to your sprite sheet
+enemySpriteSheet.src = './graphics/enemy.png';
 enemySpriteSheet.onload = () => {
     console.log('Enemy sprite sheet loaded');
 };
@@ -159,7 +157,7 @@ function allImagesLoaded() {
 function initializeGame() {
     if (!allImagesLoaded()) {
         console.log('Waiting for images to load...');
-        setTimeout(initializeGame, 100); // Check again after 100ms
+        setTimeout(initializeGame, 100);
         return;
     }
     console.log('All images loaded. Starting game...');
@@ -204,11 +202,11 @@ const player = {
     y: canvas.height / 2 - 25,
     width: 100,
     height: 100,
-    scale: 1.5, // Example scale factor
-    speed: 3,
+    scale: 1.5,
+    speed: 4.5,
     dx: 0,
     dy: 0,
-    sprite: playerSprite, // Use the loaded player sprite
+    sprite: playerSprite,
     frameX: 0,
     frameY: 0,
     frameWidth: 231,
@@ -228,7 +226,7 @@ const player = {
 
 function resetRobbery() {
     robberyAttempted = false;
-    currentGameState = gameState.PLAYING; // or another state to continue the game
+    currentGameState = gameState.PLAYING;
 }
 
 
@@ -667,13 +665,11 @@ function shootBullet() {
         if (ammoInventory[selectedAmmoType] > 0 || selectedAmmoType === 'standard') {
             const ammo = ammoTypes[selectedAmmoType];
 
-            // Calculate scaled dimensions
             const scaledWidth = player.width * player.scale;
             const scaledHeight = player.height * player.scale;
 
-            // Adjust bullet starting coordinates based on scaled dimensions
             const bulletStartX = player.facingRight ? player.x + (player.width * 0.8) : player.x - (scaledWidth - player.width) / 2;
-            const bulletStartY = player.y + scaledHeight / 4.365; // Adjust this value based on your sprite's design
+            const bulletStartY = player.y + scaledHeight / 4.365;
 
             bullets.push({
                 x: bulletStartX,
@@ -687,7 +683,6 @@ function shootBullet() {
             });
             player.lastShootTime = currentTime;
 
-            // Play the shooting sound effect
             const shootingSoundInstance = new Audio(shootingSoundSrc);
             shootingSoundInstance.play();
 
@@ -783,6 +778,34 @@ function resolveCollision(enemy1, enemy2) {
     }
 }
 
+function checkBulletCollisions() {
+    bullets.forEach((bullet, bulletIndex) => {
+        enemies.forEach((enemy, enemyIndex) => {
+            const extendedHitboxHeight = enemy.height * 2.25;
+
+            if (
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + extendedHitboxHeight &&
+                bullet.y + bullet.height > enemy.y
+            ) {
+                enemy.health -= bullet.damage;
+                enemy.health = Math.max(enemy.health, 0); 
+
+                bullet.hitEnemies.push(enemyIndex);
+
+                if (bullet.penetration <= 0) {
+                    bullets.splice(bulletIndex, 1);
+                }
+
+                if (enemy.health === 0) {
+                    enemies.splice(enemyIndex, 1);
+                }
+            }
+        });
+    });
+}
+
 function handlePlayerDamage(player, enemies, timestamp) {
     enemies.forEach(enemy => {
         const horizontallyAligned = Math.abs(player.y - enemy.y) < enemy.height / 2;
@@ -834,8 +857,8 @@ function updateBullets() {
 }
 
 function calculateScalingFactor(y) {
-    const minScale = 0.5; // Minimum scale factor (for enemies far away)
-    const maxScale = 2; // Maximum scale factor (for enemies close by)
+    const minScale = 0.5;
+    const maxScale = 2; 
     const screenHeight = canvas.height;
     
     const scaleFactor = minScale + (maxScale - minScale) * (y / screenHeight);
@@ -995,18 +1018,18 @@ function addEnemies(numberOfEnemies) {
             animationTimer: 0,
             animationSpeed: 25,
             frameX: 0,
-            totalFrames: 10, // Number of frames in the sprite sheet
+            totalFrames: 10,
             idleFrame: 0,
             speed: 1.5,
             facingLeft: false,
             width: 50,
             height: 50,
-            frameWidth: 180, // Frame width from the sprite sheet
-            frameHeight: 150, // Frame height from the sprite sheet
+            frameWidth: 180,
+            frameHeight: 150,
             health: 50,
             maxHealth: 50,
             lastAttackTime: 0,
-            image: enemySpriteSheet // Use the sprite sheet image
+            image: enemySpriteSheet
         });
     }
 }
@@ -1031,7 +1054,7 @@ function purchaseMeal(meal) {
 
 function resetRobbery() {
     robberyAttempted = false;
-    currentGameState = gameState.PLAYING; // or another state to continue the game
+    currentGameState = gameState.PLAYING;
 }
 
 function robEstablishment() {
@@ -1050,21 +1073,21 @@ function robEstablishment() {
         currentGameState = gameState.ROBBERY_FAILURE;
     }
 
-    // Reset the robbery state after determining the outcome
-    setTimeout(resetRobbery, 2000); // Delay reset to allow the player to see the outcome
+    setTimeout(resetRobbery, 2000);
 }
 
 function initializeEnemiesForLevel(level) {
     const numberOfEnemies = getNumberOfEnemies(level);
     const enemies = [];
 
-    // Define the vertical range for enemy spawning
     const enemySpawnMinY = 200;
     const enemySpawnMaxY = 440;
 
+    const enemyScale = 1.5;
+
     for (let i = 0; i < numberOfEnemies; i++) {
         const enemyImage = new Image();
-        enemyImage.src = './graphics/enemy.png'; // Replace with the actual path to your enemy image
+        enemyImage.src = './graphics/enemy.png';
         enemyImage.onload = () => {
             console.log('Enemy image loaded');
         };
@@ -1072,9 +1095,11 @@ function initializeEnemiesForLevel(level) {
             console.error('Error loading enemy image');
         };
 
-        // Ensure enemy spawns within the specified vertical range
         const enemyX = Math.random() * canvas.width;
         const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
+
+        const enemyWidth = 64 * enemyScale;
+        const enemyHeight = 64 * enemyScale;
 
         enemies.push({
             x: enemyX,
@@ -1088,11 +1113,12 @@ function initializeEnemiesForLevel(level) {
             idleFrame: 0,
             speed: 1,
             facingLeft: false,
-            width: 64,
-            height: 64,
+            width: enemyWidth, 
+            height: enemyHeight,
             health: 50,
             maxHealth: 50,
-            image: enemyImage // Assign the loaded image to the enemy
+            image: enemyImage, 
+            scale: enemyScale 
         });
     }
 
@@ -1177,9 +1203,9 @@ function drawEnemy(enemy) {
     const scaledHeight = enemy.height * scaleFactor;
 
     ctx.drawImage(
-        enemy.image,  // Assuming enemy.image is the enemy's image
-        enemy.x - scaledWidth / 2,  // Center the enemy horizontally
-        enemy.y - scaledHeight / 2,  // Center the enemy vertically
+        enemy.image,  
+        enemy.x - scaledWidth / 2,  
+        enemy.y - scaledHeight / 2,  
         scaledWidth,
         scaledHeight
     );
@@ -1225,8 +1251,6 @@ function drawStoreScreen() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(storeImg, 0, 0, canvas.width, canvas.height);
     ctx.font = '20px Arial';
-    ctx.fillStyle = 'black';
-    ctx.fillText(`Wallet: ${playerCurrency}$`, 40, 550);
 }
 
 function drawRestaurantScreen() {
@@ -1310,12 +1334,6 @@ function drawEnemyHealthBar(enemy) {
     ctx.strokeRect(barX, barY, barWidth, barHeight);
 }
 
-function drawControlsScreen() {
-    console.log("Drawing controls screen");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(controlsImage, 0, 0, canvas.width, canvas.height);
-}
-
 document.addEventListener('keydown', function (event) {
     if (event.key === 'r' || event.key === 'R') {
         restartGame();
@@ -1323,8 +1341,8 @@ document.addEventListener('keydown', function (event) {
 });
 
 function calculateScalingFactor(y) {
-    const minScale = 0.5; // Minimum scale factor (for enemies far away)
-    const maxScale = 1.5; // Maximum scale factor (for enemies close by) - Adjust this value to limit scaling
+    const minScale = 0.5; 
+    const maxScale = 1.5; 
     const screenHeight = canvas.height;
 
     const scaleFactor = minScale + (maxScale - minScale) * (y / screenHeight);
@@ -1342,9 +1360,9 @@ function drawScaledEnemy(enemy) {
     const scaledHeight = enemy.height * scaleFactor;
 
     ctx.drawImage(
-        enemy.image,  // Ensure this is a valid image
-        enemy.x - scaledWidth / 2,  // Center the enemy horizontally
-        enemy.y - scaledHeight / 2,  // Center the enemy vertically
+        enemy.image,  
+        enemy.x - scaledWidth / 2,  
+        enemy.y - scaledHeight / 2, 
         scaledWidth,
         scaledHeight
     );
@@ -1360,23 +1378,22 @@ function gameLoop(timestamp) {
     } else if (currentGameState === gameState.PLAYING) {
         drawBackground();
 
-        // Update and draw each enemy with scaling
         updateEnemyAnimation(spriteSheet, timestamp);
         enemies.forEach(enemy => {
-            drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0); // Draw the enemy frame
-            drawEnemyHealthBar(enemy); // Draw the enemy's health bar
+            drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0); 
+            drawEnemyHealthBar(enemy);
         });
 
-        ctx.drawImage(hudImage, 0, 115); // Use preloaded HUD image
+        ctx.drawImage(hudImage, 0, 120); 
 
-        updatePlayer(); // Update player without enemy collision checks
-        handlePlayerDamage(player, enemies, timestamp); // Handle player damage
+        updatePlayer(); 
+        handlePlayerDamage(player, enemies, timestamp); 
 
         updateBullets();
         drawBullets();
-        updateEnemyPositions(enemies, player); // Update enemy positions
+        updateEnemyPositions(enemies, player); 
 
-        drawPlayer(); // Draw the player
+        drawPlayer();
         checkGameOver();
         drawPlayerHealth();
         drawLevelInfo();
@@ -1385,6 +1402,8 @@ function gameLoop(timestamp) {
         checkLevelProgression();
         drawAmmoType();
         drawCurrency();
+
+        checkBulletCollisions();
 
         updateArrowPosition();
 
@@ -1395,37 +1414,37 @@ function gameLoop(timestamp) {
         drawBackground();
         drawPlayer();
         drawBullets();
-        enemies.forEach(enemy => drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0)); // Draw scaled enemies in paused state
+        enemies.forEach(enemy => drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0)); 
         drawPlayerHealth();
         drawLevelInfo();
         drawPauseMenu();
     } else if (currentGameState === gameState.STORE_SCREEN) {
         drawStoreScreen();
-        ctx.drawImage(hudImage, 0, 0);
+        ctx.drawImage(hudImage, 0, 120);
         drawCurrency();
         drawPlayerHealth();
         drawAmmoType();
     } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
         drawRestaurantScreen();
-        ctx.drawImage(hudImage, 0, 0);
+        ctx.drawImage(hudImage, 0, 120);
         drawCurrency();
         drawPlayerHealth();
         drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SCREEN) {
         drawRobberyScreen();
-        ctx.drawImage(hudImage, 0, 0);
+        ctx.drawImage(hudImage, 0, 120);
         drawCurrency();
         drawPlayerHealth();
         drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SUCCESS) {
         drawRobberySuccessScreen();
-        ctx.drawImage(hudImage, 0, 0);
+        ctx.drawImage(hudImage, 0, 120);
         drawCurrency();
         drawPlayerHealth();
         drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_FAILURE) {
         drawRobberyFailureScreen();
-        ctx.drawImage(hudImage, 0, 0);
+        ctx.drawImage(hudImage, 0, 120);
         drawCurrency();
         drawPlayerHealth();
         drawAmmoType();
