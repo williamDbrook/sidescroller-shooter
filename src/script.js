@@ -1317,6 +1317,12 @@ function drawGameOverScreen() {
     ctx.fillText('Press R to Restart', canvas.width / 2, canvas.height / 2);
 }
 
+function drawControlsScreen() {
+    console.log("Drawing controls screen");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(controlsImage, 0, 0, canvas.width, canvas.height);
+}
+
 function drawEnemyHealthBar(enemy) {
     const barWidth = 200; 
     const barHeight = 5; 
