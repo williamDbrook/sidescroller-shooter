@@ -161,14 +161,7 @@ function initializeGame() {
         return;
     }
     console.log('All images loaded. Starting game...');
-    
-    // Clear the existing enemies array without reassigning it
-    enemies.length = 0;
-    
-    // Add the enemies for the current level to the existing array
-    const newEnemies = initializeEnemiesForLevel(currentLevel);
-    enemies.push(...newEnemies); // Spread syntax to add new enemies to the existing array
-    
+    enemies = initializeEnemiesForLevel(currentLevel);
     requestAnimationFrame(gameLoop);
 }
 
@@ -286,6 +279,8 @@ const spriteSheet = {
     lastUpdateTime: 0,  
 };
 
+let enemies = [];
+
 const MARK_POSITION = {
     x: 825, 
     y: 60, 
@@ -347,12 +342,16 @@ function drawEnemyFrame(ctx, spriteSheet, enemy, frameX, frameY) {
     }
 }
 
-const MAX_ENEMIES = 6; // Set the maximum number of enemies
-
 function getNumberOfEnemies(level) {
-    // Start with 1 enemy at level 1 and increase by 1 for each subsequent level
-    // Cap the number of enemies at MAX_ENEMIES
-    return Math.min(level, MAX_ENEMIES);
+    if (level >= 1 && level <= 4) {
+        return 0;
+    } else if (level >= 5 && level <= 8) {
+        return 0;
+    } else if (level >= 9 && level <= 12) {
+        return 1;
+    } else {
+        return 2;
+    }
 }
 
 function updateEnemyAnimation(spriteSheet, timestamp) {
@@ -366,20 +365,11 @@ function updateEnemyAnimation(spriteSheet, timestamp) {
 
 function updateEnemyPositions(enemies, player) {
     enemies.forEach(enemy => {
-        // Maintain consistent speed regardless of health
-        enemy.speed = enemy.baseSpeed;
+        moveTowardPlayer(enemy);
 
-        // Update enemy position based on speed
-        enemy.x += enemy.dx * enemy.speed;
-        enemy.y += enemy.dy * enemy.speed;
-
-        // Ensure enemies do not randomly appear next to the player
-        if (enemy.x < 0) {
-            enemy.x = canvas.width + Math.random() * 100; // Reset to off-screen position if they move too far left
+        if (isNaN(enemy.x) || isNaN(enemy.y)) {
+            console.error('Invalid position values:', enemy.x, enemy.y);
         }
-
-        // Check for enemy-player collision or other logic
-        // ...
     });
 }
 
@@ -439,12 +429,7 @@ window.addEventListener('keydown', (e) => {
         if (e.code === 'Enter') {
             console.log("Enter key pressed in main menu");
             currentGameState = gameState.PLAYING;
-
-            // Clear existing enemies and initialize new ones without reassigning the array
-            enemies.length = 0;
-            const newEnemies = initializeEnemiesForLevel(currentLevel);
-            enemies.push(...newEnemies); // Spread operator to add new enemies to the existing array
-
+            enemies = initializeEnemiesForLevel(currentLevel);
             console.log("Game started, enemies initialized:", enemies);
         } else if (e.code === 'KeyQ') {
             console.log("Q key pressed in main menu");
@@ -493,7 +478,7 @@ window.addEventListener('keydown', (e) => {
             purchaseMeal(meals.BEEF_SOUP);
         } else if (e.code === 'Digit3') {
             purchaseMeal(meals.FRIED_PIRANHA);
-        } else if (e.code === 'KeyB') {
+        } else if (e.code === 'Escape') {
             currentGameState = gameState.PLAYING;
         }
     } else if (currentGameState === gameState.PAUSED) {
@@ -993,16 +978,60 @@ function isPlayerAtStorePosition() {
            player.y + player.height > STORE_POSITION.y;
 }
 
-function triggerLevelChange() {
-    currentLevel++;
-    console.log(`Level changed to: ${currentLevel}`);
-    
-    // Clear the existing enemies array without reassigning it
-    enemies.length = 0;
-    
-    // Add the enemies for the new level to the existing array
-    const newEnemies = initializeEnemiesForLevel(currentLevel);
-    enemies.push(...newEnemies); // Spread syntax to add new enemies to the existing array
+function triggerLevelChange(level) {
+    enemiesCleared = false; 
+    progressionChecked = false; 
+    enemies = initializeEnemiesForLevel(level); 
+
+    if (level === 1) {
+        enemies.length = 0;
+    }
+    if (level <= 3) {
+        addEnemies(1);
+    }
+    if (level >= 4) {
+        addEnemies(2); 
+    }
+    if (level >= 8) {
+        addEnemies(3); 
+    }
+    if (level >= 12) {
+        addEnemies(4);
+    }
+    console.log(`Level ${level} started with ${enemies.length} enemies.`);
+}
+
+function addEnemies(numberOfEnemies) {
+    for (let i = 0; i < numberOfEnemies; i++) {
+        let enemyX = canvas.width + 64; 
+        let enemyY;
+
+        do {
+            enemyY = Math.random() * canvas.height;
+        } while (enemyY < 170);
+
+        enemies.push({
+            x: enemyX,
+            y: enemyY,
+            dx: 0,
+            dy: 0,
+            animationTimer: 0,
+            animationSpeed: 25,
+            frameX: 0,
+            totalFrames: 10,
+            idleFrame: 0,
+            speed: 1.5,
+            facingLeft: false,
+            width: 50,
+            height: 50,
+            frameWidth: 180,
+            frameHeight: 150,
+            health: 50,
+            maxHealth: 50,
+            lastAttackTime: 0,
+            image: enemySpriteSheet
+        });
+    }
 }
 
 function purchaseMeal(meal) {
@@ -1047,52 +1076,53 @@ function robEstablishment() {
     setTimeout(resetRobbery, 2000);
 }
 
-// Declare enemies as a constant array
-const enemies = [];
-const spawnQueue = [];
-const spawnInterval = 2000; // Time interval between spawns in milliseconds (2 seconds)
-let lastSpawnTime = 0;
-
-// Initialize enemies for a level
 function initializeEnemiesForLevel(level) {
     const numberOfEnemies = getNumberOfEnemies(level);
-    const newEnemies = []; 
+    const enemies = [];
 
     const enemySpawnMinY = 200;
     const enemySpawnMaxY = 440;
 
-    for (let i = 0; i < numberOfEnemies; i++) {
-        const enemyX = canvas.width + Math.random() * 100; 
-        const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
+    const enemyScale = 1.5;
 
-        const enemy = {
-            x: enemyX,
-            y: enemyY,
-            dx: -1, 
-            dy: 0,
-            animationTimer: 0,
-            animationSpeed: 25,
-            frameX: 0,
-            totalFrames: 10,
-            idleFrame: 0,
-            baseSpeed: 1.5, // Base speed for consistency
-            speed: 1.5, // Initial speed set to base speed
-            facingLeft: false,
-            width: 50,
-            height: 50,
-            frameWidth: 180,
-            frameHeight: 150,
-            health: 50, // Initialize with full health
-            maxHealth: 50,
-            lastAttackTime: 0,
-            image: enemySpriteSheet 
+    for (let i = 0; i < numberOfEnemies; i++) {
+        const enemyImage = new Image();
+        enemyImage.src = './graphics/enemy.png';
+        enemyImage.onload = () => {
+            console.log('Enemy image loaded');
+        };
+        enemyImage.onerror = () => {
+            console.error('Error loading enemy image');
         };
 
-        spawnQueue.push(enemy);
-        newEnemies.push(enemy); 
+        const enemyX = Math.random() * canvas.width;
+        const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
+
+        const enemyWidth = 64 * enemyScale;
+        const enemyHeight = 64 * enemyScale;
+
+        enemies.push({
+            x: enemyX,
+            y: enemyY,
+            dx: 0,
+            dy: 0,
+            animationTimer: 0,
+            animationSpeed: 10,
+            frameX: 0,
+            totalFrames: 4,
+            idleFrame: 0,
+            speed: 1,
+            facingLeft: false,
+            width: enemyWidth, 
+            height: enemyHeight,
+            health: 50,
+            maxHealth: 50,
+            image: enemyImage, 
+            scale: enemyScale 
+        });
     }
 
-    return newEnemies; 
+    return enemies;
 }
 
 function isPlayerInStoreEntryZone() {
@@ -1344,7 +1374,6 @@ function drawScaledEnemy(enemy) {
     );
 }
 
-// Game loop
 function gameLoop(timestamp) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -1353,38 +1382,24 @@ function gameLoop(timestamp) {
     } else if (currentGameState === gameState.CONTROLS) {
         drawControlsScreen();
     } else if (currentGameState === gameState.PLAYING) {
-        // Check if it's time to spawn the next enemy
-        if (spawnQueue.length > 0 && timestamp - lastSpawnTime >= spawnInterval) {
-            const enemy = spawnQueue.shift();
-            enemies.push(enemy);
-            lastSpawnTime = timestamp;
-            console.log('Enemy spawned at:', enemy.x, enemy.y);
-        }
-
         drawBackground();
 
-        // Update and draw each enemy with scaling
         updateEnemyAnimation(spriteSheet, timestamp);
-        updateEnemyPositions(enemies, player); // Update enemy positions logically
         enemies.forEach(enemy => {
-            if (enemy.image.complete && enemy.image.naturalHeight !== 0) {
-                drawEnemyFrame(ctx, enemy.image, enemy, enemy.frameX, 0); // Draw the enemy frame
-                console.log('Drawing enemy at:', enemy.x, enemy.y);
-            } else {
-                console.warn('Enemy image not ready:', enemy);
-            }
-            drawEnemyHealthBar(enemy); // Draw the enemy's health bar
+            drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0); 
+            drawEnemyHealthBar(enemy);
         });
 
-        ctx.drawImage(hudImage, 0, 0); // Use preloaded HUD image
+        ctx.drawImage(hudImage, 0, 120); 
 
-        updatePlayer(); // Update player without enemy collision checks
-        handlePlayerDamage(player, enemies, timestamp); // Handle player damage
+        updatePlayer(); 
+        handlePlayerDamage(player, enemies, timestamp); 
 
         updateBullets();
         drawBullets();
+        updateEnemyPositions(enemies, player); 
 
-        drawPlayer(); // Draw the player
+        drawPlayer();
         checkGameOver();
         drawPlayerHealth();
         drawLevelInfo();
@@ -1394,7 +1409,7 @@ function gameLoop(timestamp) {
         drawAmmoType();
         drawCurrency();
 
-        checkBulletCollisions(); // Check for bullet collisions
+        checkBulletCollisions();
 
         updateArrowPosition();
 
@@ -1405,20 +1420,40 @@ function gameLoop(timestamp) {
         drawBackground();
         drawPlayer();
         drawBullets();
-        enemies.forEach(enemy => drawEnemyFrame(ctx, enemy.image, enemy, enemy.frameX, 0)); // Draw scaled enemies in paused state
+        enemies.forEach(enemy => drawEnemyFrame(ctx, enemySpriteSheet, enemy, enemy.frameX, 0)); 
         drawPlayerHealth();
         drawLevelInfo();
         drawPauseMenu();
     } else if (currentGameState === gameState.STORE_SCREEN) {
         drawStoreScreen();
+        ctx.drawImage(hudImage, 0, 120);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.RESTAURANT_SCREEN) {
         drawRestaurantScreen();
+        ctx.drawImage(hudImage, 0, 120);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SCREEN) {
         drawRobberyScreen();
+        ctx.drawImage(hudImage, 0, 120);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_SUCCESS) {
         drawRobberySuccessScreen();
+        ctx.drawImage(hudImage, 0, 120);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.ROBBERY_FAILURE) {
         drawRobberyFailureScreen();
+        ctx.drawImage(hudImage, 0, 120);
+        drawCurrency();
+        drawPlayerHealth();
+        drawAmmoType();
     } else if (currentGameState === gameState.GAME_OVER) {
         drawGameOverScreen();
     }
@@ -1434,5 +1469,4 @@ document.addEventListener('keyup', (event) => {
     keys[event.key] = false;
 });
 
-// Start the game loop
 requestAnimationFrame(gameLoop);
