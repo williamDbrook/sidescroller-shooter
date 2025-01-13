@@ -214,7 +214,7 @@ const player = {
     y: canvas.height / 2 - 25,
     width: 100,
     height: 100,
-    hitboxOffsetX: 70, // Offset to the right by half of the current width
+    hitboxOffsetX: 50, // Offset to the right by half of the current width
     hitboxOffsetY: 50, // Offset down by half of the current height
     scale: 1.5,
     speed: 4.5,
@@ -279,6 +279,7 @@ const storeItems = {
     penetrationAmmo: { price: 5, effect: () => { ammoInventory.penetration += 5; } },
 };
 
+const baseEnemyAttackRange = 100; // Base attack range before scaling
 const enemyAttackRange = 100;
 const enemyAttackCooldown = 800;
 
@@ -828,15 +829,22 @@ function checkBulletCollisions() {
 }
 
 function handlePlayerDamage(player, enemies, timestamp) {
+    const playerHitboxX = player.x;
+    const playerHitboxY = player.y;
+    const playerWidthScaled = player.width * player.scale;
+    const playerHeightScaled = player.height * player.scale;
+
+    const scaledEnemyAttackRange = baseEnemyAttackRange * player.scale;
+
     enemies.forEach(enemy => {
         const distance = distanceBetween(
-            player.x + player.width / 2,
-            player.y + player.height / 2,
+            playerHitboxX + playerWidthScaled / 2,
+            playerHitboxY + playerHeightScaled / 2,
             enemy.x + enemy.width / 2,
             enemy.y + enemy.height / 2
         );
 
-        if (distance <= enemyAttackRange) {
+        if (distance <= scaledEnemyAttackRange) {
             if (timestamp - player.lastDamageTime > player.damageInterval) {
                 player.health -= 10;
                 player.lastDamageTime = timestamp;
@@ -951,11 +959,15 @@ function updateEnemies() {
 }
 
 function moveTowardPlayer(enemy) {
-    const directionX = player.x - enemy.x;
-    const directionY = player.y - enemy.y;
+    const playerCenterX = player.x + (player.width * player.scale) / 2;
+    const playerCenterY = player.y + (player.height * player.scale) / 2;
+    const directionX = playerCenterX - enemy.x;
+    const directionY = playerCenterY - enemy.y;
     const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
 
-    if (magnitude > 0) {
+    const scaledEnemyAttackRange = baseEnemyAttackRange * player.scale;
+
+    if (magnitude > scaledEnemyAttackRange) {
         enemy.dx = (directionX / magnitude) * enemy.speed;
         enemy.dy = (directionY / magnitude) * enemy.speed;
     } else {
@@ -1406,6 +1418,7 @@ function gameLoop(timestamp) {
 
         updateEnemyAnimation(timestamp);
         enemies.forEach(enemy => {
+            moveTowardPlayer(enemy); // Ensure enemies move towards the player
             drawEnemy(enemy);
             drawEnemyHealthBar(enemy);
         });
