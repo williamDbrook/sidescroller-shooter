@@ -238,6 +238,27 @@ const player = {
     damageInterval: 1000,
 };
 
+const enemy = {
+    x: 300,
+    y: canvas.height / 2 - 25,
+    width: 100,
+    height: 100,
+    scale: 1.0, // Initial scale
+    speed: 2.5,
+    dx: 0,
+    dy: 0,
+    image: images.enemy,
+    frameX: 0,
+    frameY: 0,
+    frameWidth: 100,
+    frameHeight: 100,
+    facingLeft: true,
+    health: 100,
+    maxHealth: 100,
+};
+
+const enemyScalingFactor = 0.8; // Scale enemy to 80% of the player's scale
+
 function startGame() {
     enemies = initializeEnemiesForLevel(currentLevel);
     requestAnimationFrame(gameLoop);
@@ -552,6 +573,7 @@ cheatConsole.style.left = '50%';
 cheatConsole.style.transform = 'translateX(-50%)';
 cheatConsole.style.width = '300px';
 cheatConsole.style.zIndex = 10;
+cheatConsole.style.display = 'none'; // Initially hidden
 document.body.appendChild(cheatConsole);
 
 cheatConsole.addEventListener('keydown', (e) => {
@@ -581,21 +603,45 @@ function processCheatCode(command) {
             console.log('All enemies killed!');
             break;
         case 'fastshoot':
-            shootCooldown = 2;
+            player.shootCooldown = 2; // Ensure this is set on the player object
             console.log('Shoot cooldown set to 2!');
             break;
         case 'ammo':
-            activateInfiniteAmmoTypes();
+            activateInfiniteAmmoTypes(); // Ensure this function is defined elsewhere in your code
             console.log('Infinite ammo types activated!');
             break;
         case 'money':
-            addCurrency(1000);
+            addCurrency(1000); // Ensure this function is defined elsewhere in your code
             console.log('Added 1000 currency!');
+            break;
+        case 'devmode':
+            devMode = !devMode;
+            console.log(`Dev mode ${devMode ? 'enabled' : 'disabled'}`);
             break;
         default:
             console.log('Unknown cheat code!');
     }
 }
+
+let devMode = false;
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && document.activeElement === cheatConsole) {
+        const cheatCode = cheatConsole.value.toLowerCase();
+        processCheatCode(cheatCode);
+        cheatConsole.value = ''; // Clear the input
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'c') {
+        const isConsoleVisible = cheatConsole.style.display === 'block';
+        cheatConsole.style.display = isConsoleVisible ? 'none' : 'block';
+        if (!isConsoleVisible) {
+            cheatConsole.focus(); // Focus the console when shown
+        }
+    }
+});
 
 function activateInfiniteAmmoTypes() {
     ammoInventory.highDamage = Infinity;
@@ -648,9 +694,11 @@ function updatePlayer() {
         player.facingRight = true;
     }
 
+    // Update player position
     player.x += player.dx;
     player.y += player.dy;
 
+    // Keep the player within the bounds of the canvas
     const minY = 200;
     const maxY = 440;
     if (player.x < 0) player.x = 0;
@@ -658,11 +706,13 @@ function updatePlayer() {
     if (player.y < minY) player.y = minY;
     if (player.y > maxY) player.y = maxY;
 
+    // Check if player reached the right edge and proceed to the next level
     if (enemiesCleared && player.x + playerWidth >= canvas.width) {
         console.log("Player reached the right edge, proceeding to next level");
         triggerLevelChange();
     }
 
+    // Update the player sprite animation
     updatePlayerSprite();
 }
 
@@ -837,11 +887,14 @@ function handlePlayerDamage(player, enemies, timestamp) {
     const scaledEnemyAttackRange = baseEnemyAttackRange * player.scale;
 
     enemies.forEach(enemy => {
+        const enemyWidthScaled = enemy.width * enemy.scale;
+        const enemyHeightScaled = enemy.height * enemy.scale;
+
         const distance = distanceBetween(
             playerHitboxX + playerWidthScaled / 2,
             playerHitboxY + playerHeightScaled / 2,
-            enemy.x + enemy.width / 2,
-            enemy.y + enemy.height / 2
+            enemy.x + enemyWidthScaled / 2,
+            enemy.y + enemyHeightScaled / 2
         );
 
         if (distance <= scaledEnemyAttackRange) {
@@ -1179,19 +1232,17 @@ function drawPlayer() {
     }
     ctx.restore();
 
-    // Adjusted hitbox position
-    const hitboxX = player.x + player.hitboxOffsetX - player.width / 2;
-    const hitboxY = player.y + player.hitboxOffsetY - player.height / 2;
-
-    // Draw the hitbox for the player (for visualization purposes)
-    ctx.strokeStyle = 'blue';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(
-        hitboxX, 
-        hitboxY, 
-        player.width, 
-        player.height
-    );
+    if (devMode) {
+        // Draw the hitbox for the player (for visualization purposes)
+        ctx.strokeStyle = 'blue';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+            player.x, 
+            player.y, 
+            player.width * player.scale, 
+            player.height * player.scale
+        );
+    }
 }
 
 function drawEnemies() {
@@ -1200,11 +1251,12 @@ function drawEnemies() {
     });
 }
 
-// Function to draw a single enemy
 function drawEnemy(enemy) {
-    const scaleFactor = calculateScalingFactor(enemy.y);
+    const scaleFactor = calculateScalingFactor(enemy.y) * enemyScalingFactor;
     const scaledWidth = enemy.frameWidth * scaleFactor;
     const scaledHeight = enemy.frameHeight * scaleFactor;
+
+    enemy.scale = scaleFactor; // Update the enemy's scale
 
     // Draw the enemy sprite
     if (enemy.facingLeft) {
@@ -1224,15 +1276,17 @@ function drawEnemy(enemy) {
         );
     }
 
-    // Draw the hitbox for the enemy
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(
-        enemy.x - enemy.width / 2, 
-        enemy.y - enemy.height / 2, 
-        enemy.width, 
-        enemy.height
-    );
+    if (devMode) {
+        // Draw the hitbox for the enemy (for visualization purposes)
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+            enemy.x, 
+            enemy.y, 
+            enemy.width * enemy.scale, 
+            enemy.height * enemy.scale
+        );
+    }
 }
 
 function drawPlayerHealth() {
