@@ -260,6 +260,8 @@ const enemy = {
 const enemyMinY = 200;
 const enemyMaxY = 440;
 
+const enemyVerticalSpacing = 80; // Adjust the spacing as needed
+
 const enemyScalingFactor = 0.8; // Scale enemy to 80% of the player's scale
 
 function startGame() {
@@ -1137,12 +1139,13 @@ function initializeEnemiesForLevel(level) {
     const enemies = [];
 
     const enemyScale = 1.5;
-    const enemySpawnMinY = 200;
-    const enemySpawnMaxY = 440;
+    const enemyMinY = 200;
+    const enemyMaxY = 440;
+    const enemyHorizontalSpacing = 120; // Horizontal spacing between enemies
 
     for (let i = 0; i < numberOfEnemies; i++) {
-        const enemyX = canvas.width + 50; // Position off-screen to the right
-        const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
+        const enemyX = canvas.width + 50 + (i * enemyHorizontalSpacing); // Staggered horizontal positions
+        const enemyY = Math.random() * (enemyMaxY - enemyMinY) + enemyMinY;
 
         const enemyWidth = 64 * enemyScale; // Width of a single frame scaled
         const enemyHeight = 64 * enemyScale; // Height of a single frame scaled
