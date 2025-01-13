@@ -257,6 +257,9 @@ const enemy = {
     maxHealth: 100,
 };
 
+const enemyMinY = 200;
+const enemyMaxY = 440;
+
 const enemyScalingFactor = 0.8; // Scale enemy to 80% of the player's scale
 
 function startGame() {
@@ -1012,20 +1015,27 @@ function updateEnemies() {
 }
 
 function moveTowardPlayer(enemy) {
-    const playerCenterX = player.x + (player.width * player.scale) / 2;
-    const playerCenterY = player.y + (player.height * player.scale) / 2;
-    const directionX = playerCenterX - enemy.x;
-    const directionY = playerCenterY - enemy.y;
-    const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
-
-    const scaledEnemyAttackRange = baseEnemyAttackRange * player.scale;
-
-    if (magnitude > scaledEnemyAttackRange) {
-        enemy.dx = (directionX / magnitude) * enemy.speed;
-        enemy.dy = (directionY / magnitude) * enemy.speed;
-    } else {
-        enemy.dx = 0;
+    if (enemy.x > canvas.width) {
+        // Enemy is off-screen, move left towards the screen
+        enemy.dx = -enemy.speed;
         enemy.dy = 0;
+    } else {
+        // Enemy is on-screen, move towards the player
+        const playerCenterX = player.x + (player.width * player.scale) / 2;
+        const playerCenterY = player.y + (player.height * player.scale) / 2;
+        const directionX = playerCenterX - enemy.x;
+        const directionY = playerCenterY - enemy.y;
+        const magnitude = Math.sqrt(directionX * directionX + directionY * directionY);
+
+        const scaledEnemyAttackRange = baseEnemyAttackRange * player.scale;
+
+        if (magnitude > scaledEnemyAttackRange) {
+            enemy.dx = (directionX / magnitude) * enemy.speed;
+            enemy.dy = (directionY / magnitude) * enemy.speed;
+        } else {
+            enemy.dx = 0;
+            enemy.dy = 0;
+        }
     }
 
     enemy.x += enemy.dx;
@@ -1037,10 +1047,9 @@ function moveTowardPlayer(enemy) {
         enemy.facingLeft = true;
     }
 
-    if (enemy.x < 0) enemy.x = 0;
-    if (enemy.x + enemy.width > canvas.width) enemy.x = canvas.width - enemy.width;
-    if (enemy.y < 170) enemy.y = 170;
-    if (enemy.y + enemy.height > canvas.height) enemy.y = canvas.height - enemy.height;
+    // Ensure enemy stays within vertical bounds
+    if (enemy.y < enemyMinY) enemy.y = enemyMinY;
+    if (enemy.y > enemyMaxY) enemy.y = enemyMaxY;
 }
 
 function distanceBetween(x1, y1, x2, y2) {
@@ -1128,9 +1137,11 @@ function initializeEnemiesForLevel(level) {
     const enemies = [];
 
     const enemyScale = 1.5;
+    const enemySpawnMinY = 200;
+    const enemySpawnMaxY = 440;
 
     for (let i = 0; i < numberOfEnemies; i++) {
-        const enemyX = Math.random() * canvas.width;
+        const enemyX = canvas.width + 50; // Position off-screen to the right
         const enemyY = Math.random() * (enemySpawnMaxY - enemySpawnMinY) + enemySpawnMinY;
 
         const enemyWidth = 64 * enemyScale; // Width of a single frame scaled
@@ -1139,15 +1150,15 @@ function initializeEnemiesForLevel(level) {
         enemies.push({
             x: enemyX,
             y: enemyY,
-            dx: 0,
+            dx: -1.5, // Move left towards the screen
             dy: 0,
             animationTimer: 0,
             animationSpeed: 25,
             frameX: 0,
             totalFrames: 10,
             idleFrame: 0,
-            speed: 1,
-            facingLeft: false,
+            speed: 1.5,
+            facingLeft: true,
             width: enemyWidth,
             height: enemyHeight,
             health: 50,
