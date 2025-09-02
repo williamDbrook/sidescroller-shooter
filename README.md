@@ -2,7 +2,7 @@
 
 A side scrolling 2.5D shooter made in javascript. <br />
 
-If you want to play just open go here : (https://williamdbrook.github.io/sidescroller-shooter/) <br />
+If you want to play just go here : (https://williamdbrook.github.io/sidescroller-shooter/) <br />
 
 
 Credits: <br />
