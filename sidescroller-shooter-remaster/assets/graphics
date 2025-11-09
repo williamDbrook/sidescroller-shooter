@@ -1,0 +1,49 @@
+// Simple image manifest + preloader for the project
+
+export const imageSources = {
+    enemy: './graphics/enemy.png',
+    background: './graphics/bg.png',
+    restaurant: './graphics/reastaurant_screen.png', // note: original filename 'reastaurant_screen.png' — keep consistent with disk if different
+    robbery: './graphics/robbery_screen.png',
+    robberySuccess: './graphics/robbery_screen_succes.png',
+    robberyFailure: './graphics/robbery_screen_failed.png',
+    store: './graphics/store_screen.png',
+    hud: './graphics/hud.png',
+    mainMenu: './graphics/mainmenu.png',
+    arrow: './graphics/mark.png',
+    controls: './graphics/how.png',
+    player: './graphics/player.png'
+};
+
+export const images = {}; // populated by preloadImages()
+
+/**
+ * Preload all images listed in imageSources.
+ * Returns a Promise that resolves when all images have loaded,
+ * or rejects on the first error.
+ */
+export function preloadImages() {
+    const entries = Object.entries(imageSources);
+    const total = entries.length;
+    let loaded = 0;
+
+    return new Promise((resolve, reject) => {
+        if (total === 0) return resolve(images);
+
+        entries.forEach(([key, src]) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => {
+                images[key] = img;
+                loaded += 1;
+                // optional console for debugging
+                // console.log(`${key} loaded (${loaded}/${total})`);
+                if (loaded === total) resolve(images);
+            };
+            img.onerror = (err) => {
+                console.error(`Error loading image "${key}" from "${src}"`, err);
+                reject(new Error(`Failed to load image: ${src}`));
+            };
+        });
+    });
+}
