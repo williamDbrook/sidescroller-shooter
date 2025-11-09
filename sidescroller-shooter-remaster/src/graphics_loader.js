@@ -21,3 +21,10 @@ const graphicsLoader = (() => {
 })();
 
 export default graphicsLoader;
+
+// Re-export preload helpers from the assets folder
+
+import { preloadImages, images as imagesCache, imageFiles } from '../assets/graphics.js';
+import { preloadSounds, sounds as soundsCache, soundFiles } from '../assets/sounds.js';
+
+export { preloadImages, preloadSounds, imagesCache as images, soundsCache as sounds, imageFiles, soundFiles };

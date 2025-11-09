@@ -1,88 +1,78 @@
-/*
-  Audio manifest + preloader that tolerates the different sound folder names in the repo:
-  - assets/sounds
-  - assets/Sound
-  - sounds
-  - Sound
-  Update the file names below to match your disk.
-*/
-
+// Simple robust audio manifest + preloader that probes multiple candidate dirs
 export const soundFiles = {
-    // Example entries — replace/add real filenames from your assets folders
-    shoot: 'shoot.wav',
-    explosion: 'explosion.wav',
-    musicLoop: 'music.ogg',
-    sfxHit: 'hit.wav'
+    shoot: 'shoot_sound.mp3',
 };
 
 export const sounds = {}; // populated by preloadSounds()
 
 const soundCandidateDirs = [
-    './sounds',
-    './Sound',
-    './assets/sounds',
-    './assets/Sound',
-    '../assets/sounds',
-    '../assets/Sound',
+    '/assets/Sound',
     '/assets/sounds',
-    '/assets/Sound'
+    './Sound',
+    './sounds',
+    '../assets/Sound',
+    '../assets/sounds',
+    '/Sound',
+    '/sounds'
 ];
 
-function tryLoadAudioFromSrc(src) {
+async function fetchAsBlob(url) {
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText} for ${url}`);
+    const ct = res.headers.get('content-type') || '';
+    // accept if content-type contains "audio" or it's a binary stream
+    if (!ct.includes('audio') && !ct.includes('application/octet-stream') && !url.match(/\.(wav|mp3|ogg|m4a|aac|flac)$/i)) {
+        console.warn(`Warning: fetched ${url} with content-type "${ct}"`);
+    }
+    return await res.blob();
+}
+
+function audioFromBlob(blob) {
+    const audio = new Audio();
+    const url = URL.createObjectURL(blob);
+    audio.src = url;
+    // revoke object URL after metadata loads to free memory
+    const cleanup = () => {
+        try { URL.revokeObjectURL(url); } catch (e) {}
+    };
     return new Promise((resolve, reject) => {
-        const audio = new Audio();
-        audio.src = src;
-        // Some browsers do not fire oncanplaythrough until user gesture; we accept "loadedmetadata" as progress
-        const onLoad = () => {
-            cleanup();
-            resolve(audio);
-        };
-        const onError = (e) => {
-            cleanup();
-            reject(new Error(`Audio failed to load: ${src}`));
-        };
-        function cleanup() {
-            audio.removeEventListener('canplaythrough', onLoad);
-            audio.removeEventListener('loadedmetadata', onLoad);
-            audio.removeEventListener('error', onError);
-        }
-        audio.addEventListener('canplaythrough', onLoad, { once: true });
-        audio.addEventListener('loadedmetadata', onLoad, { once: true });
+        const onLoaded = () => { cleanup(); resolve(audio); };
+        const onError = (e) => { cleanup(); reject(new Error('Audio element failed to load')); };
+        audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+        audio.addEventListener('canplaythrough', onLoaded, { once: true });
         audio.addEventListener('error', onError, { once: true });
-        // start loading
+        // ensure browser starts fetching (some browsers need play gesture, but loadedmetadata from blob usually fires)
         audio.load();
     });
 }
 
 async function tryLoadAudioWithDirs(filename) {
-    let lastError = null;
+    let lastErr = null;
     for (const dir of soundCandidateDirs) {
-        const src = `${dir}/${filename}`;
+        const url = `${dir}/${filename}`;
         try {
-            const audio = await tryLoadAudioFromSrc(src);
-            return { audio, src };
+            const blob = await fetchAsBlob(url);
+            const audio = await audioFromBlob(blob);
+            return { audio, src: url };
         } catch (err) {
-            lastError = err;
+            lastErr = err;
+            // continue trying next dir
         }
     }
-    throw lastError || new Error(`Could not find audio file ${filename} in candidate dirs`);
+    throw lastErr || new Error(`Could not find audio file ${filename} in candidate dirs`);
 }
 
 /**
  * Preload all audio listed in soundFiles.
- * Resolves with the sounds object once all are at least metadata-loaded.
+ * Resolves with the sounds object once all are loaded (metadata/canplaythrough).
  */
 export async function preloadSounds() {
     const entries = Object.entries(soundFiles);
-    const total = entries.length;
-    let loaded = 0;
-
     for (const [key, filename] of entries) {
         try {
             const { audio, src } = await tryLoadAudioWithDirs(filename);
             sounds[key] = audio;
-            loaded += 1;
-            // optional: console.info(`${key} loaded from ${src} (${loaded}/${total})`);
+            // optional: console.info(`sound ${key} loaded from ${src}`);
         } catch (err) {
             console.error(`Failed to load sound "${key}" (${filename}):`, err);
             throw err;

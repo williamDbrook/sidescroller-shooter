@@ -1,9 +1,8 @@
-// Simple image manifest + preloader for the project
-
+// Simple image manifest + preloader that probes likely asset folders (graphic / graphics / src variants)
 export const imageFiles = {
     enemy: 'enemy.png',
     background: 'bg.png',
-    restaurant: 'reastaurant_screen.png', // keep disk spelling or rename file on disk
+    restaurant: 'reastaurant_screen.png', // keep disk spelling if that is what you have
     robbery: 'robbery_screen.png',
     robberySuccess: 'robbery_screen_succes.png',
     robberyFailure: 'robbery_screen_failed.png',
@@ -15,61 +14,56 @@ export const imageFiles = {
     player: 'player.png'
 };
 
-export const images = {}; // populated by preloadImages()
+export const images = {};
 
 const candidateDirs = [
-    './graphic',
-    './graphics',
+    '/assets/graphic',
+    '/assets/graphics',
+    '/graphic',
+    '/graphics',
+    '/src/graphic',
+    '/src/graphics',
     './assets/graphic',
     './assets/graphics',
+    './graphic',
+    './graphics',
     '../assets/graphic',
-    '../assets/graphics',
-    '/assets/graphic',
-    '/assets/graphics'
+    '../assets/graphics'
 ];
 
-function tryLoadImageFromSrc(src) {
+function loadImageFromUrl(url) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.src = src;
+        img.src = url;
         img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Image failed to load: ${src}`));
+        img.onerror = () => reject(new Error(`Image failed to load: ${url}`));
     });
 }
 
-async function tryLoadImageWithDirs(filename) {
-    let lastError = null;
+async function findAndLoadImage(filename) {
+    let lastErr = null;
     for (const dir of candidateDirs) {
-        const src = `${dir}/${filename}`;
+        const url = `${dir}/${filename}`;
         try {
-            const img = await tryLoadImageFromSrc(src);
-            return { img, src };
+            const img = await loadImageFromUrl(url);
+            return { img, url };
         } catch (err) {
-            lastError = err;
+            lastErr = err;
         }
     }
-    throw lastError || new Error(`Could not find ${filename} in candidate dirs`);
+    throw lastErr || new Error(`Could not find ${filename} in candidate dirs`);
 }
 
-/**
- * Preload all images listed in imageFiles.
- * Returns a Promise that resolves with the images object when done.
- * Tries multiple candidate directories so it works with different asset-folder names.
- */
 export async function preloadImages() {
     const entries = Object.entries(imageFiles);
-    const total = entries.length;
-    let loaded = 0;
-
     for (const [key, filename] of entries) {
         try {
-            const { img, src } = await tryLoadImageWithDirs(filename);
+            const { img, url } = await findAndLoadImage(filename);
             images[key] = img;
-            loaded += 1;
-            // optional: console.info(`${key} loaded from ${src} (${loaded}/${total})`);
+            // optional: console.info(`${key} loaded from ${url}`);
         } catch (err) {
             console.error(`Failed to load image "${key}" (${filename}):`, err);
-            throw err; // propagate — caller can decide to continue or halt
+            throw err;
         }
     }
     return images;

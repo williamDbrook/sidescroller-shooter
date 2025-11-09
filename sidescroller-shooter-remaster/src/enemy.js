@@ -57,4 +57,19 @@ class Enemy {
     }
 }
 
+// If you already have enemy initialization logic, replace this stub with it.
+// Otherwise this exported function provides initializeEnemiesForLevel so main.js can call it.
+export function initializeEnemiesForLevel(level = 1) {
+    const enemies = [];
+    for (let i = 0; i < level; i++) {
+        enemies.push({
+            x: 800 + i * 160,
+            y: 80 + (i % 4) * 48,
+            hp: 1,
+            type: 'grunt'
+        });
+    }
+    return enemies;
+}
+
 export default Enemy;
